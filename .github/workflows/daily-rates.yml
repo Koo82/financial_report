@@ -1,0 +1,94 @@
+name: Daily exchange rates
+
+on:
+  schedule:
+    # 11:30 KST (02:30 UTC), weekdays: after the daily quote is published.
+    - cron: "30 2 * * 1-5"
+    # 12:30 KST safety retry; skipped automatically if the first run was fresh.
+    - cron: "30 3 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Fetch even if the data was updated in the last 3 hours"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/daily-rates.yml"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Run tests
+        run: uv run python -m unittest discover -s tests -v
+
+      - name: Fetch rates
+        continue-on-error: true
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          args=(--data data/rates.json --skip-if-fresh 180)
+          if [ "${FORCE}" = "true" ]; then
+            args+=(--force)
+          fi
+          uv run financial-report fetch "${args[@]}"
+
+      - name: Commit history
+        run: |
+          if git diff --quiet -- data/rates.json; then
+            echo "No rate changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/rates.json
+          git commit -m "chore: update exchange rates"
+          git pull --rebase --autostash
+          git push
+
+      - name: Assemble site
+        run: |
+          rm -rf _site
+          mkdir -p _site/data
+          cp -r site/. _site/
+          cp data/rates.json _site/data/rates.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

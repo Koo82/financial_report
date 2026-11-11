@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b1220" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="오늘의 환율" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta
+      name="description"
+      content="원/달러와 원/엔(100엔) 환율을 매일 확인하는 대시보드"
+    />
+    <title>오늘의 환율</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">DAILY EXCHANGE RATES</p>
+          <h1>오늘의 환율</h1>
+          <p class="stamp" id="stamp" aria-live="polite">불러오는 중…</p>
+        </div>
+        <span class="source-badge" id="source-badge" hidden></span>
+      </header>
+
+      <div class="error" id="error" role="alert" hidden>
+        <span id="error-text">환율 데이터를 불러오지 못했어요.</span>
+        <button type="button" id="retry">다시 시도</button>
+      </div>
+
+      <section class="cards" aria-label="오늘의 환율">
+        <article class="card card--usd">
+          <div class="card-head">
+            <h2>원/달러</h2>
+            <span class="code">USD/KRW</span>
+          </div>
+          <p class="rate">
+            <span id="usd-rate" class="placeholder">—</span><span class="unit">원</span>
+          </p>
+          <p class="delta flat" id="usd-delta">—</p>
+          <p class="card-meta" id="usd-meta">—</p>
+        </article>
+
+        <article class="card card--jpy">
+          <div class="card-head">
+            <h2>원/엔</h2>
+            <span class="code">JPY/KRW · 100엔</span>
+          </div>
+          <p class="rate">
+            <span id="jpy-rate" class="placeholder">—</span><span class="unit">원</span>
+          </p>
+          <p class="delta flat" id="jpy-delta">—</p>
+          <p class="card-meta" id="jpy-meta">—</p>
+        </article>
+      </section>
+
+      <section class="panel chart-panel" id="chart-panel" aria-label="환율 추이">
+        <div class="panel-head">
+          <div>
+            <h2>최근 추이</h2>
+            <p class="panel-sub" id="range-label">최근 30일</p>
+          </div>
+          <div class="segmented" role="group" aria-label="기간 선택">
+            <button type="button" data-range="30" class="active">30일</button>
+            <button type="button" data-range="90">90일</button>
+          </div>
+        </div>
+
+        <div class="chart-block">
+          <div class="chart-head">
+            <p class="chart-name">
+              <span class="dot dot--usd"></span>
+              <span>원/달러</span>
+              <strong id="legend-usd">—</strong>
+            </p>
+            <p class="chart-range" id="range-usd">—</p>
+          </div>
+          <div class="chart-wrap">
+            <svg
+              id="chart-usd"
+              class="chart-svg"
+              role="img"
+              aria-label="원/달러 최근 환율 추이 선 그래프"
+              viewBox="0 0 720 180"
+            ></svg>
+            <div class="chart-tooltip" id="tooltip-usd" hidden></div>
+            <p class="chart-empty" id="empty-usd" hidden>
+              표시할 데이터가 아직 충분하지 않아요.
+            </p>
+          </div>
+        </div>
+
+        <div class="chart-block">
+          <div class="chart-head">
+            <p class="chart-name">
+              <span class="dot dot--jpy"></span>
+              <span>원/엔</span>
+              <span class="chart-unit">100엔</span>
+              <strong id="legend-jpy">—</strong>
+            </p>
+            <p class="chart-range" id="range-jpy">—</p>
+          </div>
+          <div class="chart-wrap">
+            <svg
+              id="chart-jpy"
+              class="chart-svg"
+              role="img"
+              aria-label="원/엔 최근 환율 추이 선 그래프"
+              viewBox="0 0 720 180"
+            ></svg>
+            <div class="chart-tooltip" id="tooltip-jpy" hidden></div>
+            <p class="chart-empty" id="empty-jpy" hidden>
+              표시할 데이터가 아직 충분하지 않아요.
+            </p>
+          </div>
+        </div>
+
+        <div class="chart-axis">
+          <span id="axis-start">—</span>
+          <span id="axis-end">—</span>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>
+          출처: <span id="source-text">—</span> · 시장 환율 기준<br />
+          <span id="source-note" hidden
+            >ECB 고시환율을 사용했습니다. 실제 은행 매매기준율과 차이가 있을 수
+            있습니다.</span
+          >
+        </p>
+        <p>표시된 환율은 참고용이며, 실제 거래 환율과 다를 수 있습니다.</p>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
