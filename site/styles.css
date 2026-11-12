@@ -563,7 +563,7 @@ h1 {
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 6px 16px;
   margin: 4px 0 2px;
   font-size: 11.5px;
   color: var(--muted);
@@ -573,6 +573,17 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.chart-legend .legend-item {
+  white-space: nowrap;
+}
+
+.chart-legend .legend-range {
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-wrap {
@@ -747,6 +758,15 @@ h1 {
 
   .chart-range {
     margin-left: auto;
+  }
+
+  .chart-legend {
+    gap: 5px 12px;
+    font-size: 11px;
+  }
+
+  .chart-legend .legend-range {
+    font-size: 10px;
   }
 }
 

@@ -512,7 +512,11 @@ function renderChart(chart, points) {
     svg.toggleAttribute("hidden", true);
     empty.hidden = false;
     if (legend) legend.textContent = "—";
-    range.textContent = "—";
+    if (range) range.textContent = "—";
+    for (const item of chart.series) {
+      const node = $(`rng-${chart.id}-${item.key}`);
+      if (node) node.textContent = "—";
+    }
     state.charts[chart.id] = null;
     return;
   }
@@ -536,6 +540,10 @@ function renderChart(chart, points) {
   const padding = spread > 0 ? spread * 0.16 : Math.max(rawMax * 0.005, 0.01);
   const min = rawMin - padding;
   const max = rawMax + padding;
+
+  const extents = new Map(
+    series.map((item) => [item.key, extentOf(points, item.key)]),
+  );
 
   const startDay = dayNumber(points[0].date);
   const endDay = dayNumber(points[points.length - 1].date);
@@ -629,7 +637,22 @@ function renderChart(chart, points) {
     legend.textContent = formatValue(series[0], latest[series[0].key]);
   }
 
-  range.textContent = formatRange(series, rawMin, rawMax);
+  for (const item of chart.series) {
+    const node = $(`rng-${chart.id}-${item.key}`);
+    if (!node) continue;
+    const extent = extents.get(item.key);
+    node.textContent = extent
+      ? formatExtent(item, extent.min, extent.max)
+      : "—";
+  }
+
+  if (range) {
+    const extent = extents.get(series[0].key);
+    range.textContent =
+      series.length === 1 && extent
+        ? `범위 ${formatExtent(series[0], extent.min, extent.max)}`
+        : "—";
+  }
 
   state.charts[chart.id] = {
     chart,
@@ -649,14 +672,26 @@ function renderChart(chart, points) {
   };
 }
 
-function formatRange(series, min, max) {
-  if (series[0].format === "percent") {
-    return `범위 ${numberFmt.format(min)} – ${numberFmt.format(max)}%`;
+function extentOf(points, key) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const point of points) {
+    const value = point[key];
+    if (!Number.isFinite(value)) continue;
+    if (value < min) min = value;
+    if (value > max) max = value;
   }
-  if (series[0].format === "usd") {
-    return `범위 $${numberFmt.format(min)} – $${numberFmt.format(max)}`;
+  return Number.isFinite(min) ? { min, max } : null;
+}
+
+function formatExtent(item, min, max) {
+  if (item.format === "percent") {
+    return `${numberFmt.format(min)} – ${numberFmt.format(max)}%`;
   }
-  return `범위 ${numberFmt.format(min)} – ${numberFmt.format(max)}원`;
+  if (item.format === "usd") {
+    return `$${numberFmt.format(min)} – $${numberFmt.format(max)}`;
+  }
+  return `${numberFmt.format(min)} – ${numberFmt.format(max)}원`;
 }
 
 function nearestIndex(points, target) {

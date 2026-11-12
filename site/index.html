@@ -204,12 +204,20 @@
                 <span>국채 금리</span>
                 <span class="chart-unit">%</span>
               </p>
-              <p class="chart-range" id="range-yields">—</p>
             </div>
-            <div class="chart-legend" aria-hidden="true">
-              <span><i class="dot dot--y5"></i>5년</span>
-              <span><i class="dot dot--y10"></i>10년</span>
-              <span><i class="dot dot--y30"></i>30년</span>
+            <div class="chart-legend">
+              <span class="legend-item"
+                ><i class="dot dot--y5" aria-hidden="true"></i>5년
+                <b class="legend-range" id="rng-yields-us5y">—</b></span
+              >
+              <span class="legend-item"
+                ><i class="dot dot--y10" aria-hidden="true"></i>10년
+                <b class="legend-range" id="rng-yields-us10y">—</b></span
+              >
+              <span class="legend-item"
+                ><i class="dot dot--y30" aria-hidden="true"></i>30년
+                <b class="legend-range" id="rng-yields-us30y">—</b></span
+              >
             </div>
             <div class="chart-wrap">
               <svg
@@ -316,11 +324,16 @@
                 <span>원유 선물</span>
                 <span class="chart-unit">$/bbl</span>
               </p>
-              <p class="chart-range" id="range-oil">—</p>
             </div>
-            <div class="chart-legend" aria-hidden="true">
-              <span><i class="dot dot--wti"></i>WTI</span>
-              <span><i class="dot dot--brent"></i>브렌트</span>
+            <div class="chart-legend">
+              <span class="legend-item"
+                ><i class="dot dot--wti" aria-hidden="true"></i>WTI
+                <b class="legend-range" id="rng-oil-wti">—</b></span
+              >
+              <span class="legend-item"
+                ><i class="dot dot--brent" aria-hidden="true"></i>브렌트
+                <b class="legend-range" id="rng-oil-brent">—</b></span
+              >
             </div>
             <div class="chart-wrap">
               <svg
