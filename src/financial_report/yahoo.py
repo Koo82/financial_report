@@ -141,21 +141,25 @@ def align_series(
 
 
 def fetch_points(
-    range_: str = "6mo",
+    days: int = 180,
     interval: str = "1d",
     *,
     timeout: float = 15.0,
     attempts: int = 3,
     sleep: Callable[[float], None] | None = None,
 ) -> list[Point]:
-    """Fetch both symbols and return aligned daily points."""
+    """Fetch both symbols for the last ``days`` and return aligned points."""
+
+    end = int(time.time())
+    start = end - days * 86_400
 
     series: dict[str, dict[str, float]] = {}
     for key, symbol in SYMBOLS.items():
         payload = _get_json(
             f"/v8/finance/chart/{symbol}",
             {
-                "range": range_,
+                "period1": str(start),
+                "period2": str(end + 86_400),
                 "interval": interval,
                 "includePrePost": "false",
                 "events": "div,split",

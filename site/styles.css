@@ -285,6 +285,7 @@ h1 {
 
 .panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
@@ -306,6 +307,7 @@ h1 {
 .segmented {
   display: inline-flex;
   padding: 3px;
+  margin-left: auto;
   border-radius: 10px;
   background: var(--panel-soft);
   border: 1px solid var(--border);
@@ -455,11 +457,20 @@ h1 {
 .chart-axis {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   margin-top: 2px;
   padding: 0 2px;
   font-size: 11px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
+}
+
+.chart-axis span {
+  white-space: nowrap;
+}
+
+#axis-mid {
+  text-align: center;
 }
 
 /* Footer */
@@ -498,6 +509,16 @@ h1 {
 
   .panel {
     padding: 16px;
+  }
+}
+
+@media (max-width: 430px) {
+  .segmented {
+    width: 100%;
+  }
+
+  .segmented button {
+    flex: 1;
   }
 }
 

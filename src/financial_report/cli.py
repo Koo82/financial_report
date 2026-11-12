@@ -13,18 +13,20 @@ from . import frankfurter, store, yahoo
 
 Source = tuple[str, Callable[[], list[store.Point]]]
 
+BOOTSTRAP_DAYS = 1200
+INCREMENTAL_DAYS = 14
 
-def build_sources(existing: dict | None) -> list[Source]:
+
+def build_sources(existing: dict | None, days: int | None = None) -> list[Source]:
     has_history = bool(existing and existing.get("points"))
-    yahoo_range = "1mo" if has_history else "6mo"
-    frankfurter_days = 14 if has_history else 400
+    window = days or (INCREMENTAL_DAYS if has_history else BOOTSTRAP_DAYS)
 
     return [
-        ("yahoo", lambda: yahoo.fetch_points(range_=yahoo_range)),
+        ("yahoo", lambda: yahoo.fetch_points(days=window)),
         (
             "frankfurter",
             lambda: frankfurter.fetch_points(
-                start=frankfurter.default_start(frankfurter_days)
+                start=frankfurter.default_start(window)
             ),
         ),
     ]
@@ -37,6 +39,7 @@ def run_fetch(
     skip_if_fresh: int = 0,
     force: bool = False,
     dry_run: bool = False,
+    days: int | None = None,
     now: datetime | None = None,
 ) -> int:
     """Fetch from the first working source, merge, and save.
@@ -58,7 +61,9 @@ def run_fetch(
             )
             return 0
 
-    candidates = list(sources) if sources is not None else build_sources(existing)
+    candidates = (
+        list(sources) if sources is not None else build_sources(existing, days)
+    )
     failures: list[str] = []
 
     for name, fetch in candidates:
@@ -101,6 +106,16 @@ def run_fetch(
     return 1
 
 
+def _positive_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a whole number") from exc
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return number
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="financial-report",
@@ -113,6 +128,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--data",
         default="data/rates.json",
         help="history file to update (default: data/rates.json)",
+    )
+    fetch.add_argument(
+        "--days",
+        type=_positive_int,
+        default=None,
+        metavar="N",
+        help=(
+            "backfill window in days (default: 14 with existing history, "
+            "1200 on the first run)"
+        ),
     )
     fetch.add_argument(
         "--skip-if-fresh",
@@ -151,7 +176,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         sources = [
-            source for source in build_sources(existing) if source[0] == args.source
+            source
+            for source in build_sources(existing, args.days)
+            if source[0] == args.source
         ]
 
     return run_fetch(
@@ -160,4 +187,5 @@ def main(argv: Sequence[str] | None = None) -> int:
         skip_if_fresh=args.skip_if_fresh,
         force=args.force,
         dry_run=args.dry_run,
+        days=args.days,
     )

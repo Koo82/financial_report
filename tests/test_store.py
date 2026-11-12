@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from financial_report import store
@@ -53,7 +53,7 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(merged["points"][-1]["usdKrw"], 1320.0)
 
     def test_old_points_beyond_retention_are_removed(self) -> None:
-        old = (datetime(2024, 1, 1).date()).isoformat()
+        old = (datetime(2022, 1, 1).date()).isoformat()
         new = (datetime(2026, 11, 10).date()).isoformat()
         payload = store.merge(
             None,
@@ -61,6 +61,20 @@ class MergeTests(unittest.TestCase):
             "test",
         )
         self.assertEqual([p["date"] for p in payload["points"]], [new])
+
+    def test_three_year_old_point_is_retained(self) -> None:
+        new = datetime(2026, 11, 10)
+        old = (new - timedelta(days=1095)).date().isoformat()
+        payload = store.merge(
+            None,
+            [
+                store.Point(old, 1300.0, 800.0),
+                store.Point(new.date().isoformat(), 1310.0, 810.0),
+            ],
+            "test",
+        )
+        self.assertEqual(len(payload["points"]), 2)
+        self.assertEqual(payload["points"][0]["date"], old)
 
     def test_invalid_existing_entries_are_skipped(self) -> None:
         existing = {

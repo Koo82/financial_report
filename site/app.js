@@ -5,6 +5,13 @@ const SERIES = [
   { key: "jpyKrw100", label: "원/엔", card: "jpy", cssVar: "--jpy" },
 ];
 
+const RANGE_LABELS = {
+  30: "최근 30일",
+  90: "최근 90일",
+  365: "최근 1년",
+  1095: "최근 3년",
+};
+
 // Each currency gets its own compact chart and y-scale, so daily moves stay
 // readable instead of being flattened by the gap between 1,340 and 846 won.
 const W = 720;
@@ -192,13 +199,25 @@ function renderSource() {
 function renderCharts() {
   const points = rangePoints();
 
-  $("range-label").textContent = `최근 ${state.rangeDays}일`;
+  $("range-label").textContent =
+    RANGE_LABELS[state.rangeDays] ?? `최근 ${state.rangeDays}일`;
   $("axis-start").textContent = points.length
     ? formatDate(points[0].date)
     : "—";
   $("axis-end").textContent = points.length
     ? formatDate(points[points.length - 1].date)
     : "—";
+
+  const mid = $("axis-mid");
+  if (points.length >= 3) {
+    mid.hidden = false;
+    mid.textContent = formatDate(
+      points[Math.floor((points.length - 1) / 2)].date,
+    );
+  } else {
+    mid.hidden = true;
+    mid.textContent = "—";
+  }
 
   for (const series of SERIES) {
     renderSeriesChart(series, points);

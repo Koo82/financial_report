@@ -6,7 +6,7 @@
 앱처럼 사용할 수 있습니다.
 
 - 서버, 데이터베이스, API 키가 필요 없습니다.
-- 30일 / 90일 추이 차트, 전일 대비 등락, 다크 모드를 지원합니다.
+- 30일 / 90일 / 1년 / 3년 추이 차트, 전일 대비 등락, 다크 모드를 지원합니다.
 - 원/엔은 **100엔 기준**으로 표시합니다.
 - Yahoo Finance를 우선 사용하고, 실패하면 ECB 기준환율(Frankfurter)로
   자동 전환합니다.
@@ -15,7 +15,7 @@
 
 ```
 .github/workflows/daily-rates.yml  # 매일 11:30 KST 실행, 데이터 커밋, Pages 배포
-data/rates.json                    # 누적된 일별 환율 (약 400일 보관)
+data/rates.json                    # 누적된 일별 환율 (약 3.3년 보관)
 site/                              # 정적 대시보드 (index.html, app.js, styles.css)
 src/financial_report/              # 수집/병합 CLI
 tests/                             # 단위 테스트
@@ -24,7 +24,7 @@ tests/                             # 단위 테스트
 ## 로컬에서 실행
 
 ```bash
-# 1) 환율 받아오기 (처음 실행 시 최근 1년 남짓을 채웁니다)
+# 1) 환율 받아오기 (처음 실행 시 최근 3년 남짓을 채웁니다)
 uv run financial-report fetch --data data/rates.json
 
 # 2) 미리보기
@@ -41,7 +41,14 @@ python3 -m http.server 8000 -d site
 ```bash
 uv run financial-report fetch --dry-run          # 파일을 쓰지 않고 결과만 확인
 uv run financial-report fetch --source frankfurter
+uv run financial-report fetch --days 1200        # 3년치를 한 번에 채우기/갱신
 uv run financial-report fetch --force            # 최신 데이터여도 강제 갱신
+```
+
+기존에 1년치만 있던 데이터에 3년치를 더하려면 한 번만 실행하면 됩니다.
+
+```bash
+uv run financial-report fetch --data data/rates.json --source frankfurter --days 1200 --force
 ```
 
 ## GitHub Pages 배포

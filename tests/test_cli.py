@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from financial_report import cli, store
 
@@ -12,6 +13,36 @@ def point(
     day: str = "2026-11-10", usd: float = 1310.0, jpy: float = 810.0
 ) -> store.Point:
     return store.Point(day, usd, jpy)
+
+
+class BuildSourcesTests(unittest.TestCase):
+    def _calls(self, existing: dict | None, days: int | None):
+        with (
+            patch.object(cli.yahoo, "fetch_points", return_value=[]) as yahoo_fetch,
+            patch.object(
+                cli.frankfurter, "fetch_points", return_value=[]
+            ) as frankfurter_fetch,
+        ):
+            sources = dict(cli.build_sources(existing, days))
+            sources["yahoo"]()
+            sources["frankfurter"]()
+        return yahoo_fetch, frankfurter_fetch
+
+    def test_first_run_backfills_three_years(self) -> None:
+        yahoo_fetch, _ = self._calls(None, None)
+        yahoo_fetch.assert_called_once_with(days=cli.BOOTSTRAP_DAYS)
+        self.assertEqual(cli.BOOTSTRAP_DAYS, 1200)
+
+    def test_incremental_run_is_short(self) -> None:
+        existing = {"points": [point().as_dict()]}
+        yahoo_fetch, _ = self._calls(existing, None)
+        yahoo_fetch.assert_called_once_with(days=cli.INCREMENTAL_DAYS)
+        self.assertEqual(cli.INCREMENTAL_DAYS, 14)
+
+    def test_explicit_days_overrides_default(self) -> None:
+        existing = {"points": [point().as_dict()]}
+        yahoo_fetch, _ = self._calls(existing, 1200)
+        yahoo_fetch.assert_called_once_with(days=1200)
 
 
 class RunFetchTests(unittest.TestCase):

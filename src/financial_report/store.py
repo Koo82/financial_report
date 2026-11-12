@@ -14,7 +14,7 @@ from typing import Any
 
 KST = timezone(timedelta(hours=9))
 SCHEMA_VERSION = 1
-RETAIN_DAYS = 400
+RETAIN_DAYS = 1200
 
 
 class StoreError(RuntimeError):
