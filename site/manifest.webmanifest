@@ -1,7 +1,7 @@
 {
-  "name": "오늘의 환율",
-  "short_name": "환율",
-  "description": "원/달러와 원/엔(100엔) 환율을 매일 확인하는 대시보드",
+  "name": "오늘의 시장",
+  "short_name": "시장",
+  "description": "환율, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

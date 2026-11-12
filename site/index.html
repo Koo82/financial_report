@@ -8,16 +8,16 @@
     />
     <meta name="theme-color" content="#0b1220" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="오늘의 환율" />
+    <meta name="apple-mobile-web-app-title" content="오늘의 시장" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
     <meta
       name="description"
-      content="원/달러와 원/엔(100엔) 환율을 매일 확인하는 대시보드"
+      content="환율, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
     />
-    <title>오늘의 환율</title>
+    <title>오늘의 시장</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -27,123 +27,336 @@
     <main class="shell">
       <header class="hero">
         <div>
-          <p class="eyebrow">DAILY EXCHANGE RATES</p>
-          <h1>오늘의 환율</h1>
+          <p class="eyebrow">DAILY MARKET SNAPSHOT</p>
+          <h1>오늘의 시장</h1>
           <p class="stamp" id="stamp" aria-live="polite">불러오는 중…</p>
         </div>
-        <span class="source-badge" id="source-badge" hidden></span>
       </header>
 
       <div class="error" id="error" role="alert" hidden>
-        <span id="error-text">환율 데이터를 불러오지 못했어요.</span>
+        <span id="error-text">시장 데이터를 불러오지 못했어요.</span>
         <button type="button" id="retry">다시 시도</button>
       </div>
 
-      <section class="cards" aria-label="오늘의 환율">
-        <article class="card card--usd">
-          <div class="card-head">
-            <h2>원/달러</h2>
-            <span class="code">USD/KRW</span>
-          </div>
-          <p class="rate">
-            <span id="usd-rate" class="placeholder">—</span><span class="unit">원</span>
-          </p>
-          <p class="delta flat" id="usd-delta">—</p>
-          <p class="card-meta" id="usd-meta">—</p>
-        </article>
-
-        <article class="card card--jpy">
-          <div class="card-head">
-            <h2>원/엔</h2>
-            <span class="code">JPY/KRW · 100엔</span>
-          </div>
-          <p class="rate">
-            <span id="jpy-rate" class="placeholder">—</span><span class="unit">원</span>
-          </p>
-          <p class="delta flat" id="jpy-delta">—</p>
-          <p class="card-meta" id="jpy-meta">—</p>
-        </article>
+      <section class="toolbar" aria-label="차트 기간">
+        <p class="toolbar-label" id="range-label">최근 30일</p>
+        <div class="segmented" role="group" aria-label="기간 선택">
+          <button type="button" data-range="30" class="active">30일</button>
+          <button type="button" data-range="90">90일</button>
+          <button type="button" data-range="365">1년</button>
+          <button type="button" data-range="1095">3년</button>
+        </div>
       </section>
 
-      <section class="panel chart-panel" id="chart-panel" aria-label="환율 추이">
-        <div class="panel-head">
-          <div>
-            <h2>최근 추이</h2>
-            <p class="panel-sub" id="range-label">최근 30일</p>
+      <section class="section" aria-labelledby="fx-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="fx-title">환율</h2>
+            <span class="stale-badge" id="fx-stale" hidden>갱신 지연</span>
           </div>
-          <div class="segmented" role="group" aria-label="기간 선택">
-            <button type="button" data-range="30" class="active">30일</button>
-            <button type="button" data-range="90">90일</button>
-            <button type="button" data-range="365">1년</button>
-            <button type="button" data-range="1095">3년</button>
-          </div>
+          <p class="section-sub" id="fx-asof">—</p>
         </div>
 
-        <div class="chart-block">
-          <div class="chart-head">
-            <p class="chart-name">
-              <span class="dot dot--usd"></span>
-              <span>원/달러</span>
-              <strong id="legend-usd">—</strong>
+        <div class="cards">
+          <article class="card card--usd">
+            <div class="card-head">
+              <h3>원/달러</h3>
+              <span class="code">USD/KRW</span>
+            </div>
+            <p class="rate">
+              <span id="usd-rate" class="placeholder">—</span
+              ><span class="unit">원</span>
             </p>
-            <p class="chart-range" id="range-usd">—</p>
-          </div>
-          <div class="chart-wrap">
-            <svg
-              id="chart-usd"
-              class="chart-svg"
-              role="img"
-              aria-label="원/달러 최근 환율 추이 선 그래프"
-              viewBox="0 0 720 180"
-            ></svg>
-            <div class="chart-tooltip" id="tooltip-usd" hidden></div>
-            <p class="chart-empty" id="empty-usd" hidden>
-              표시할 데이터가 아직 충분하지 않아요.
+            <p class="delta flat" id="usd-delta">—</p>
+            <p class="card-meta" id="usd-meta">—</p>
+          </article>
+
+          <article class="card card--jpy">
+            <div class="card-head">
+              <h3>원/엔</h3>
+              <span class="code">JPY/KRW · 100엔</span>
+            </div>
+            <p class="rate">
+              <span id="jpy-rate" class="placeholder">—</span
+              ><span class="unit">원</span>
             </p>
-          </div>
+            <p class="delta flat" id="jpy-delta">—</p>
+            <p class="card-meta" id="jpy-meta">—</p>
+          </article>
         </div>
 
-        <div class="chart-block">
-          <div class="chart-head">
-            <p class="chart-name">
-              <span class="dot dot--jpy"></span>
-              <span>원/엔</span>
-              <span class="chart-unit">100엔</span>
-              <strong id="legend-jpy">—</strong>
-            </p>
-            <p class="chart-range" id="range-jpy">—</p>
+        <div class="panel chart-panel" aria-label="환율 추이">
+          <div class="panel-head">
+            <h3>최근 추이</h3>
           </div>
-          <div class="chart-wrap">
-            <svg
-              id="chart-jpy"
-              class="chart-svg"
-              role="img"
-              aria-label="원/엔 최근 환율 추이 선 그래프"
-              viewBox="0 0 720 180"
-            ></svg>
-            <div class="chart-tooltip" id="tooltip-jpy" hidden></div>
-            <p class="chart-empty" id="empty-jpy" hidden>
-              표시할 데이터가 아직 충분하지 않아요.
-            </p>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--usd"></span>
+                <span>원/달러</span>
+                <strong id="legend-usd">—</strong>
+              </p>
+              <p class="chart-range" id="range-usd">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-usd"
+                class="chart-svg"
+                role="img"
+                aria-label="원/달러 최근 환율 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-usd" hidden></div>
+              <p class="chart-empty" id="empty-usd" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--jpy"></span>
+                <span>원/엔</span>
+                <span class="chart-unit">100엔</span>
+                <strong id="legend-jpy">—</strong>
+              </p>
+              <p class="chart-range" id="range-jpy">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-jpy"
+                class="chart-svg"
+                role="img"
+                aria-label="원/엔 최근 환율 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-jpy" hidden></div>
+              <p class="chart-empty" id="empty-jpy" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-axis" aria-hidden="true">
+            <span id="axis-fx-start">—</span>
+            <span class="axis-mid" id="axis-fx-mid" hidden>—</span>
+            <span id="axis-fx-end">—</span>
           </div>
         </div>
+      </section>
 
-        <div class="chart-axis">
-          <span id="axis-start">—</span>
-          <span id="axis-mid" hidden>—</span>
-          <span id="axis-end">—</span>
+      <section class="section" aria-labelledby="yields-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="yields-title">미국 국채</h2>
+            <span class="stale-badge" id="yields-stale" hidden>갱신 지연</span>
+          </div>
+          <p class="section-sub" id="yields-asof">—</p>
+        </div>
+
+        <div class="cards cards--three">
+          <article class="card card--compact card--y5">
+            <div class="card-head">
+              <h3>5년물</h3>
+              <span class="code">US 5Y</span>
+            </div>
+            <p class="rate">
+              <span id="y5-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="y5-delta">—</p>
+            <p class="card-meta" id="y5-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--y10">
+            <div class="card-head">
+              <h3>10년물</h3>
+              <span class="code">US 10Y</span>
+            </div>
+            <p class="rate">
+              <span id="y10-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="y10-delta">—</p>
+            <p class="card-meta" id="y10-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--y30">
+            <div class="card-head">
+              <h3>30년물</h3>
+              <span class="code">US 30Y</span>
+            </div>
+            <p class="rate">
+              <span id="y30-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="y30-delta">—</p>
+            <p class="card-meta" id="y30-meta">—</p>
+          </article>
+        </div>
+
+        <div class="panel chart-panel" aria-label="미국 국채 금리 추이">
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span>국채 금리</span>
+                <span class="chart-unit">%</span>
+              </p>
+              <p class="chart-range" id="range-yields">—</p>
+            </div>
+            <div class="chart-legend" aria-hidden="true">
+              <span><i class="dot dot--y5"></i>5년</span>
+              <span><i class="dot dot--y10"></i>10년</span>
+              <span><i class="dot dot--y30"></i>30년</span>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-yields"
+                class="chart-svg"
+                role="img"
+                aria-label="미국 국채 5년, 10년, 30년 금리 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-yields" hidden></div>
+              <p class="chart-empty" id="empty-yields" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-axis" aria-hidden="true">
+            <span id="axis-yields-start">—</span>
+            <span class="axis-mid" id="axis-yields-mid" hidden>—</span>
+            <span id="axis-yields-end">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="futures-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="futures-title">원자재 선물</h2>
+            <span class="stale-badge" id="futures-stale" hidden>갱신 지연</span>
+          </div>
+          <p class="section-sub" id="futures-asof">—</p>
+        </div>
+
+        <div class="cards cards--three">
+          <article class="card card--compact card--gold">
+            <div class="card-head">
+              <h3>금</h3>
+              <span class="code">GOLD · $/oz</span>
+            </div>
+            <p class="rate">
+              <span id="gold-rate" class="placeholder">—</span
+              ><span class="unit">$/oz</span>
+            </p>
+            <p class="delta flat" id="gold-delta">—</p>
+            <p class="card-meta" id="gold-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--wti">
+            <div class="card-head">
+              <h3>WTI</h3>
+              <span class="code">CRUDE · $/bbl</span>
+            </div>
+            <p class="rate">
+              <span id="wti-rate" class="placeholder">—</span
+              ><span class="unit">$/bbl</span>
+            </p>
+            <p class="delta flat" id="wti-delta">—</p>
+            <p class="card-meta" id="wti-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--brent">
+            <div class="card-head">
+              <h3>브렌트</h3>
+              <span class="code">BRENT · $/bbl</span>
+            </div>
+            <p class="rate">
+              <span id="brent-rate" class="placeholder">—</span
+              ><span class="unit">$/bbl</span>
+            </p>
+            <p class="delta flat" id="brent-delta">—</p>
+            <p class="card-meta" id="brent-meta">—</p>
+          </article>
+        </div>
+
+        <div class="panel chart-panel" aria-label="원자재 선물 추이">
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--gold"></span>
+                <span>금 선물</span>
+                <span class="chart-unit">$/oz</span>
+                <strong id="legend-gold">—</strong>
+              </p>
+              <p class="chart-range" id="range-gold">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-gold"
+                class="chart-svg"
+                role="img"
+                aria-label="금 선물 가격 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-gold" hidden></div>
+              <p class="chart-empty" id="empty-gold" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span>원유 선물</span>
+                <span class="chart-unit">$/bbl</span>
+              </p>
+              <p class="chart-range" id="range-oil">—</p>
+            </div>
+            <div class="chart-legend" aria-hidden="true">
+              <span><i class="dot dot--wti"></i>WTI</span>
+              <span><i class="dot dot--brent"></i>브렌트</span>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-oil"
+                class="chart-svg"
+                role="img"
+                aria-label="WTI와 브렌트 원유 선물 가격 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-oil" hidden></div>
+              <p class="chart-empty" id="empty-oil" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-axis" aria-hidden="true">
+            <span id="axis-futures-start">—</span>
+            <span class="axis-mid" id="axis-futures-mid" hidden>—</span>
+            <span id="axis-futures-end">—</span>
+          </div>
         </div>
       </section>
 
       <footer class="foot">
         <p>
-          출처: <span id="source-text">—</span> · 시장 환율 기준<br />
+          출처: <span id="source-text">—</span><br />
           <span id="source-note" hidden
             >ECB 고시환율을 사용했습니다. 실제 은행 매매기준율과 차이가 있을 수
             있습니다.</span
           >
         </p>
-        <p>표시된 환율은 참고용이며, 실제 거래 환율과 다를 수 있습니다.</p>
+        <p>
+          국채 금리는 미국 재무부 고시 par yield, 선물은 최근월물 연속 계약의
+          종가입니다. 표시된 값은 참고용이며 실제 거래 가격과 다를 수 있습니다.
+        </p>
       </footer>
     </main>
 

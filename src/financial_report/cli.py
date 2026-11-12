@@ -1,4 +1,4 @@
-"""Command line entry point for fetching and storing exchange rates."""
+"""Command line entry point for fetching and storing market data."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from . import frankfurter, store, yahoo
+from . import frankfurter, markets, store, yahoo
 
 Source = tuple[str, Callable[[], list[store.Point]]]
 
@@ -119,7 +119,10 @@ def _positive_int(value: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="financial-report",
-        description="Fetch daily USD/KRW and 100 JPY/KRW rates.",
+        description=(
+            "Fetch daily exchange rates, US Treasury yields, and "
+            "commodity futures."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -162,11 +165,67 @@ def build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="restrict the data source (default: auto with fallback)",
     )
+
+    market = subparsers.add_parser(
+        "fetch-markets",
+        help="fetch Treasury yields and commodity futures",
+    )
+    market.add_argument(
+        "--data-dir",
+        default="data",
+        help="directory holding yields.json and futures.json (default: data)",
+    )
+    market.add_argument(
+        "--group",
+        choices=("all", "yields", "futures"),
+        default="all",
+        help="series group to update (default: all)",
+    )
+    market.add_argument(
+        "--days",
+        type=_positive_int,
+        default=None,
+        metavar="N",
+        help=(
+            "backfill window in days (default: 14 with existing history, "
+            "1200 on the first run)"
+        ),
+    )
+    market.add_argument(
+        "--skip-if-fresh",
+        type=int,
+        default=0,
+        metavar="MINUTES",
+        help="skip a group when its file was updated less than MINUTES ago",
+    )
+    market.add_argument(
+        "--force",
+        action="store_true",
+        help="ignore --skip-if-fresh",
+    )
+    market.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the merged JSON without writing files",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "fetch-markets":
+        groups = (
+            ("yields", "futures") if args.group == "all" else (args.group,)
+        )
+        return markets.run_fetch_markets(
+            args.data_dir,
+            groups,
+            days=args.days,
+            skip_if_fresh=args.skip_if_fresh,
+            force=args.force,
+            dry_run=args.dry_run,
+        )
 
     sources: Sequence[Source] | None = None
     if args.source != "auto":

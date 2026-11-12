@@ -1,7 +1,7 @@
 [project]
 name = "financial-report"
 version = "0.1.0"
-description = "Daily USD/KRW and 100 JPY/KRW dashboard published to GitHub Pages"
+description = "Daily FX, US Treasury yield, and commodity futures dashboard published to GitHub Pages"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
