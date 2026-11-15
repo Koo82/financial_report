@@ -2,13 +2,13 @@ name: Daily market data
 
 on:
   schedule:
-    # GitHub has been dispatching scheduled runs about 8 hours late, so these
-    # crons fire at 03:30/04:30 KST (18:30/19:30 UTC the previous day) and the
-    # delayed runs land around 11:30/12:30 KST, after the US close and the
-    # Treasury update. UTC Mon-Fri means runs land Tuesday-Saturday KST.
-    - cron: "30 18 * * 1-5"
+    # GitHub has been dispatching scheduled runs about 8-9 hours late. These
+    # crons fire at 00:00/01:00 KST Monday-Saturday (15:00/16:00 UTC on the
+    # previous day, Sunday-Friday), so the delayed runs land around 08:00-10:00
+    # KST, after the US close and the Treasury update.
+    - cron: "0 15 * * 0-5"
     # Safety retry; skipped automatically if the first run was fresh.
-    - cron: "30 19 * * 1-5"
+    - cron: "0 16 * * 0-5"
   workflow_dispatch:
     inputs:
       force:

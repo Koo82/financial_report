@@ -26,7 +26,7 @@
 ## 구조
 
 ```
-.github/workflows/daily-rates.yml  # 화-토 11:30 KST 갱신, 데이터 커밋, Pages 배포
+.github/workflows/daily-rates.yml  # 월-토 09:00 KST 전후 갱신, 데이터 커밋, Pages 배포
 data/rates.json                    # 누적된 일별 환율
 data/yields.json                   # 누적된 미국 국채 5/10/30년 금리
 data/futures.json                  # 누적된 금/WTI/브렌트 선물 종가
@@ -104,11 +104,11 @@ uv run financial-report fetch-markets --data-dir data --days 1200 --force
    `https://<사용자명>.github.io/financial-report/` 가 열립니다.
 5. iPad Safari에서 주소를 열고 **공유 → 홈 화면에 추가**를 누릅니다.
 
-이후에는 화-토 11:30 KST 전후에 자동으로 갱신됩니다. GitHub의 예약 실행이
-평소 8시간가량 늦게 시작되는 점을 감안해 cron을 03:30/04:30 KST(전날 18:30/19:30
-UTC)로 잡았습니다. 지연이 없어지면 실행 시각도 그만큼 앞당겨지며, 12:30 KST
-재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 세 데이터 파일을 모두
-커밋하고 `_site/data/`에 복사한 뒤 Pages로 배포합니다.
+이후에는 월-토 09:00 KST 전후에 자동으로 갱신됩니다. GitHub의 예약 실행이
+평소 8~9시간 늦게 시작되는 점을 감안해 cron을 00:00/01:00 KST(전날 15:00/16:00
+UTC, 일-금)로 잡았습니다. 지연이 없어지면 실행 시각도 그만큼 앞당겨지며, 01:00
+KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 세 데이터 파일을
+모두 커밋하고 `_site/data/`에 복사한 뒤 Pages로 배포합니다.
 
 ## 데이터에 대해
 
