@@ -15,7 +15,7 @@
     />
     <meta
       name="description"
-      content="환율, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
+      content="환율, 기준금리, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
     />
     <title>오늘의 시장</title>
     <link rel="manifest" href="manifest.webmanifest" />
@@ -144,6 +144,82 @@
             <span class="axis-mid" id="axis-fx-mid" hidden>—</span>
             <span id="axis-fx-end">—</span>
           </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="policy-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="policy-title">기준금리</h2>
+            <span class="stale-badge" id="policy-stale" hidden>갱신 지연</span>
+          </div>
+          <p class="section-sub" id="policy-asof">—</p>
+        </div>
+
+        <div class="cards cards--three">
+          <article class="card card--compact card--kr">
+            <div class="card-head">
+              <h3>한국</h3>
+              <span class="code">BOK 기준금리</span>
+            </div>
+            <p class="rate">
+              <span id="kr-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="kr-delta">—</p>
+            <p class="card-meta" id="kr-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--jp">
+            <div class="card-head">
+              <h3>일본</h3>
+              <span class="code">BOJ 정책금리</span>
+            </div>
+            <p class="rate">
+              <span id="jp-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="jp-delta">—</p>
+            <p class="card-meta" id="jp-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--us">
+            <div class="card-head">
+              <h3>미국</h3>
+              <span class="code">Fed 목표범위</span>
+            </div>
+            <p class="rate">
+              <span id="us-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="us-delta">—</p>
+            <p class="card-meta" id="us-meta">—</p>
+          </article>
+        </div>
+
+        <div class="panel policy-panel" aria-label="기준금리 변경 이력">
+          <div class="panel-head">
+            <h3>최근 변경 이력</h3>
+            <p class="panel-sub">최근 3년</p>
+          </div>
+
+          <div class="policy-table-wrap" id="policy-table-wrap">
+            <table class="policy-table">
+              <thead>
+                <tr>
+                  <th scope="col">국가</th>
+                  <th scope="col">적용일</th>
+                  <th scope="col">이전</th>
+                  <th scope="col">이후</th>
+                  <th scope="col">변동</th>
+                </tr>
+              </thead>
+              <tbody id="policy-history"></tbody>
+            </table>
+          </div>
+          <p class="chart-empty" id="policy-empty" hidden>
+            표시할 변경 이력이 아직 없어요.
+          </p>
         </div>
       </section>
 
@@ -368,7 +444,9 @@
         </p>
         <p>
           국채 금리는 미국 재무부 고시 par yield, 선물은 최근월물 연속 계약의
-          종가입니다. 표시된 값은 참고용이며 실제 거래 가격과 다를 수 있습니다.
+          종가입니다. 기준금리는 한국은행·일본은행·미국 연준의 정책금리이며,
+          미국은 목표범위로 표시합니다. 표시된 값은 참고용이며 실제 거래
+          가격과 다를 수 있습니다.
         </p>
       </footer>
     </main>

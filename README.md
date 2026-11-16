@@ -1,6 +1,6 @@
 # 오늘의 시장
 
-환율, 미국 국채 금리, 금과 원유 선물을 매일 한 번 갱신해서 보여주는 정적
+환율, 기준금리, 미국 국채 금리, 금과 원유 선물을 매일 한 번 갱신해서 보여주는 정적
 대시보드입니다. GitHub Actions가 하루 두 번 데이터를 받아 `data/` 아래 JSON에
 쌓고, GitHub Pages로 배포합니다. iPad에서는 Safari로 열고 **홈 화면에 추가**하면
 앱처럼 사용할 수 있습니다.
@@ -15,9 +15,13 @@
 | 구분 | 항목 | 출처 |
 | --- | --- | --- |
 | 환율 | 원/달러(USD/KRW), 원/엔(100엔, JPY/KRW) | Yahoo Finance → ECB 기준환율 |
+| 기준금리 | 한국은행 기준금리, 일본은행 정책금리, 미국 연준 목표범위 | 한국은행 ECOS, BIS, FRED |
 | 미국 국채 | 5년물, 10년물, 30년물 par yield(%) | 미국 재무부 |
 | 원자재 선물 | 금(GC), WTI 원유(CL), 브렌트 원유(OIL) | Sina Finance → Eastmoney |
 
+- 기준금리는 각 중앙은행의 정책금리이며, 미국은 **목표범위**(예: 3.75–4.00%)로
+  표시합니다. 일본은 BOJ 자체 API가 정책목표가 아닌 실제 콜금리만 제공하므로
+  BIS 중앙은행 정책금리 데이터를 사용합니다.
 - 국채 금리는 미국 재무부가 고시하는 **par yield**입니다.
 - 선물 가격은 최근월물 연속 계약의 **종가**이며, 진행 중인 당일 세션은
   제외합니다.
@@ -28,6 +32,7 @@
 ```
 .github/workflows/daily-rates.yml  # 월-토 09:00 KST 전후 갱신, 데이터 커밋, Pages 배포
 data/rates.json                    # 누적된 일별 환율
+data/policy.json                   # 한국/일본/미국 기준금리 변경 이력
 data/yields.json                   # 누적된 미국 국채 5/10/30년 금리
 data/futures.json                  # 누적된 금/WTI/브렌트 선물 종가
 site/                              # 정적 대시보드 (index.html, app.js, styles.css)
@@ -41,6 +46,15 @@ tests/                             # 단위 테스트
 
 ## 로컬에서 실행
 
+기준금리 수집에는 무료 API 키 두 개가 필요합니다. [한국은행
+ECOS](https://ecos.bok.or.kr/api/)와 [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)에서
+발급받아 환경변수로 지정합니다. 키가 없어도 환율·국채·선물은 정상 동작합니다.
+
+```bash
+export ECOS_API_KEY="..."
+export FRED_API_KEY="..."
+```
+
 ```bash
 # 1) 환율 받아오기 (처음 실행 시 최근 3년 남짓을 채웁니다)
 uv run financial-report fetch --data data/rates.json
@@ -48,9 +62,12 @@ uv run financial-report fetch --data data/rates.json
 # 2) 국채 금리와 선물 받아오기
 uv run financial-report fetch-markets --data-dir data
 
-# 3) 미리보기
+# 3) 기준금리 받아오기
+uv run financial-report fetch-policy --data data/policy.json
+
+# 4) 미리보기
 mkdir -p site/data
-cp data/rates.json data/yields.json data/futures.json site/data/
+cp data/rates.json data/policy.json data/yields.json data/futures.json site/data/
 python3 -m http.server 8000 -d site
 ```
 
@@ -76,6 +93,14 @@ uv run financial-report fetch-markets --dry-run            # 결과만 확인
 uv run financial-report fetch-markets --skip-if-fresh 180  # 3시간 내 갱신됐으면 건너뜀
 ```
 
+`fetch-policy`는 국가별로 독립적으로 갱신합니다. 한 국가의 출처가 실패해도 나머지
+국가의 이력은 저장됩니다.
+
+```bash
+uv run financial-report fetch-policy --data data/policy.json
+uv run financial-report fetch-policy --days 3650 --dry-run  # 10년치, 결과만 확인
+```
+
 기존에 1년치만 있던 데이터에 3년치를 더하려면 각각 한 번만 실행하면 됩니다.
 
 ```bash
@@ -98,16 +123,19 @@ uv run financial-report fetch-markets --data-dir data --days 1200 --force
 
 3. 저장소 **Settings → Pages → Build and deployment → Source**에서
    **GitHub Actions**를 선택합니다.
-4. **Actions** 탭 → `Daily market data` → **Run workflow**를 한 번 실행합니다.
+4. **Settings → Secrets and variables → Actions**에 기준금리용 키를 추가합니다.
+   - `ECOS_API_KEY`: 한국은행 ECOS API 키
+   - `FRED_API_KEY`: FRED API 키
+5. **Actions** 탭 → `Daily market data` → **Run workflow**를 한 번 실행합니다.
    첫 push 시점에는 Pages 설정이 없어 배포가 한 번 실패할 수 있습니다. 3번을
    마친 뒤 다시 실행하면 됩니다. 첫 실행이 끝나면
    `https://<사용자명>.github.io/financial-report/` 가 열립니다.
-5. iPad Safari에서 주소를 열고 **공유 → 홈 화면에 추가**를 누릅니다.
+6. iPad Safari에서 주소를 열고 **공유 → 홈 화면에 추가**를 누릅니다.
 
 이후에는 월-토 09:00 KST 전후에 자동으로 갱신됩니다. GitHub의 예약 실행이
 평소 8~9시간 늦게 시작되는 점을 감안해 cron을 00:00/01:00 KST(전날 15:00/16:00
 UTC, 일-금)로 잡았습니다. 지연이 없어지면 실행 시각도 그만큼 앞당겨지며, 01:00
-KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 세 데이터 파일을
+KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 네 데이터 파일을
 모두 커밋하고 `_site/data/`에 복사한 뒤 Pages로 배포합니다.
 
 ## 데이터에 대해
@@ -116,6 +144,10 @@ KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크�
   차이가 날 수 있습니다. Yahoo가 응답하지 않으면 ECB 기준환율(Frankfurter)을
   사용하며, 화면 하단에 표시됩니다. 두 출처가 섞여 있을 수 있고, 최근 값은
   마지막으로 성공한 출처를 따르며 과거 구간은 당시 수집된 값이 유지됩니다.
+- **기준금리**: 한국은 ECOS의 기준금리 일별 계열, 미국은 FRED의 연준 목표범위
+  상·하한, 일본은 BIS 중앙은행 정책금리(일본은행 발표 기준)를 사용합니다.
+  금리가 바뀐 날짜만 이력으로 저장하며, 화면에는 최근 3년간의 변경 이력을
+  표시합니다. 한 국가의 출처가 실패해도 나머지 국가의 이력은 유지됩니다.
 - **미국 국채**: 미국 재무부 일별 금리 CSV를 사용합니다. 미국 공휴일에는 새
   고시가 없어 직전 값이 유지됩니다. 2026-11-11은 재향군인의 날이라 최신 값이
   11-10입니다.
@@ -138,6 +170,12 @@ Frankfurter로 전환하므로 화면은 계속 동작합니다. GitHub Actions 
 Eastmoney는 호스트별로 간헐적으로 차단됩니다. 수집기는 `push2his` →
 `push2delay` → `push2` 순서로 호스트를 바꿔가며 재시도하고, 모두 실패하면
 Sina 데이터를 유지합니다.
+
+**기준금리가 갱신되지 않는 경우**
+`ECOS_API_KEY`와 `FRED_API_KEY`가 설정되어 있는지 확인합니다. 로컬에서는
+`export`로 지정하고, Actions에서는 저장소 Secrets에 같은 이름으로 추가합니다.
+키가 없으면 한국(ECOS)과 미국(FRED)만 건너뛰고 일본(BIS)은 계속 갱신됩니다.
+모든 출처가 실패하면 기존 `data/policy.json`을 그대로 둡니다.
 
 **Actions가 멈춘 경우**
 GitHub는 저장소에 60일간 변경이 없으면 예약 워크플로를 비활성화합니다. 이

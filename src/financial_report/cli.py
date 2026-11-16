@@ -9,7 +9,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from . import frankfurter, markets, store, yahoo
+from . import frankfurter, markets, policy, store, yahoo
 
 Source = tuple[str, Callable[[], list[store.Point]]]
 
@@ -120,8 +120,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="financial-report",
         description=(
-            "Fetch daily exchange rates, US Treasury yields, and "
-            "commodity futures."
+            "Fetch daily exchange rates, US Treasury yields, commodity "
+            "futures, and central-bank policy rates."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -208,11 +208,42 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the merged JSON without writing files",
     )
+
+    policy_parser = subparsers.add_parser(
+        "fetch-policy",
+        help="fetch central-bank policy rates",
+    )
+    policy_parser.add_argument(
+        "--data",
+        default="data/policy.json",
+        help="history file to update (default: data/policy.json)",
+    )
+    policy_parser.add_argument(
+        "--days",
+        type=_positive_int,
+        default=None,
+        metavar="N",
+        help=(
+            "history window in days (default: 3650, about ten years)"
+        ),
+    )
+    policy_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the merged JSON without writing the file",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "fetch-policy":
+        return policy.run_fetch_policy(
+            args.data,
+            days=args.days,
+            dry_run=args.dry_run,
+        )
 
     if args.command == "fetch-markets":
         groups = (

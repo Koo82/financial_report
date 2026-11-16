@@ -18,6 +18,10 @@
   --usd: #3b82f6;
   --jpy: #f59e0b;
 
+  --kr: #dc2626;
+  --jp: #7c3aed;
+  --us: #0891b2;
+
   --y5: #0d9488;
   --y10: #4f46e5;
   --y30: #9333ea;
@@ -51,6 +55,10 @@
 
     --usd: #60a5fa;
     --jpy: #fbbf24;
+
+    --kr: #f87171;
+    --jp: #a78bfa;
+    --us: #22d3ee;
 
     --y5: #2dd4bf;
     --y10: #818cf8;
@@ -282,6 +290,18 @@ h1 {
 
 .card--jpy {
   --accent: var(--jpy);
+}
+
+.card--kr {
+  --accent: var(--kr);
+}
+
+.card--jp {
+  --accent: var(--jp);
+}
+
+.card--us {
+  --accent: var(--us);
 }
 
 .card--y5 {
@@ -668,6 +688,94 @@ h1 {
 
 .axis-mid {
   text-align: center;
+}
+
+/* Policy rate history */
+
+.policy-panel {
+  margin-top: 14px;
+}
+
+.policy-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.policy-table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.policy-table th,
+.policy-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.policy-table th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.policy-table td {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-table th:not(:first-child),
+.policy-table td:not(:first-child) {
+  text-align: right;
+}
+
+.policy-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.policy-country {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 650;
+}
+
+.policy-country .dot {
+  width: 7px;
+  height: 7px;
+}
+
+.dot--kr {
+  background: var(--kr);
+}
+
+.dot--jp {
+  background: var(--jp);
+}
+
+.dot--us {
+  background: var(--us);
+}
+
+.policy-change {
+  font-weight: 700;
+}
+
+.policy-change.up {
+  color: var(--up);
+}
+
+.policy-change.down {
+  color: var(--down);
+}
+
+.policy-change.flat {
+  color: var(--flat);
 }
 
 /* Footer */

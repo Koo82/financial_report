@@ -32,11 +32,13 @@ class SeriesPoint:
         return {"date": self.date, **self.values}
 
 
-def _number(value: Any) -> float | None:
+def _number(value: Any, *, allow_nonpositive: bool = False) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     number = float(value)
-    if not math.isfinite(number) or number <= 0:
+    if not math.isfinite(number):
+        return None
+    if number <= 0 and not allow_nonpositive:
         return None
     return round(number, 4)
 
@@ -50,9 +52,13 @@ def _day(value: Any) -> str | None:
 
 
 def make_point(
-    day: Any, raw: Mapping[str, Any], series: Sequence[str]
+    day: Any,
+    raw: Mapping[str, Any],
+    series: Sequence[str],
+    *,
+    allow_nonpositive: bool = False,
 ) -> SeriesPoint | None:
-    """Validate one row, keeping only known positive numeric values."""
+    """Validate one row, keeping only known numeric values."""
 
     parsed = _day(day)
     if parsed is None:
@@ -60,7 +66,7 @@ def make_point(
 
     values: dict[str, float] = {}
     for key in series:
-        number = _number(raw.get(key))
+        number = _number(raw.get(key), allow_nonpositive=allow_nonpositive)
         if number is not None:
             values[key] = number
 
@@ -102,6 +108,7 @@ def merge(
     kind: str,
     updated_at: datetime | None = None,
     retain_days: int = RETAIN_DAYS,
+    allow_nonpositive: bool = False,
 ) -> dict[str, Any]:
     """Merge new columns into history; new values win for the same date."""
 
@@ -115,12 +122,22 @@ def merge(
         for raw in existing.get("points", []):
             if not isinstance(raw, Mapping):
                 continue
-            point = make_point(raw.get("date"), raw, old_series)
+            point = make_point(
+                raw.get("date"),
+                raw,
+                old_series,
+                allow_nonpositive=allow_nonpositive,
+            )
             if point is not None:
                 by_date.setdefault(point.date, {}).update(point.values)
 
     for point in points:
-        clean = make_point(point.date, point.values, series)
+        clean = make_point(
+            point.date,
+            point.values,
+            series,
+            allow_nonpositive=allow_nonpositive,
+        )
         if clean is not None:
             by_date.setdefault(clean.date, {}).update(clean.values)
 

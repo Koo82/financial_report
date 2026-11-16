@@ -78,15 +78,22 @@ jobs:
           fi
           uv run financial-report fetch-markets "${args[@]}"
 
+      - name: Fetch central bank policy rates
+        continue-on-error: true
+        env:
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: uv run financial-report fetch-policy --data data/policy.json
+
       - name: Commit history
         run: |
-          if git diff --quiet -- data/rates.json data/yields.json data/futures.json; then
+          git add data/rates.json data/yields.json data/futures.json data/policy.json
+          if git diff --cached --quiet; then
             echo "No market changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/rates.json data/yields.json data/futures.json
           git commit -m "chore: update market data"
           git pull --rebase --autostash
           git push
@@ -96,7 +103,7 @@ jobs:
           rm -rf _site
           mkdir -p _site/data
           cp -r site/. _site/
-          cp data/rates.json data/yields.json data/futures.json _site/data/
+          cp data/rates.json data/yields.json data/futures.json data/policy.json _site/data/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

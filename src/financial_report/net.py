@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable, Mapping
+from http.client import HTTPException
 from typing import Any
 from urllib.request import Request, urlopen
 
@@ -45,7 +46,7 @@ def get_text(
             with urlopen(request, timeout=timeout) as response:
                 charset = response.headers.get_content_charset() or "utf-8"
                 text = response.read().decode(charset, errors="replace")
-        except OSError as exc:
+        except (OSError, HTTPException) as exc:
             last = exc
         else:
             if text.strip():

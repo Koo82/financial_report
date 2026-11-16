@@ -47,6 +47,31 @@ const FUTURES_SERIES = [
   },
 ];
 
+const POLICY_SERIES = [
+  {
+    key: "kr",
+    card: "kr",
+    label: "한국",
+    dot: "dot--kr",
+    source: "한국은행 ECOS",
+  },
+  {
+    key: "jp",
+    card: "jp",
+    label: "일본",
+    dot: "dot--jp",
+    source: "BIS · 일본은행",
+  },
+  {
+    key: "us",
+    card: "us",
+    label: "미국",
+    dot: "dot--us",
+    source: "FRED · 연준",
+    keys: ["us_low", "us_high"],
+  },
+];
+
 const CHARTS = [
   {
     id: "usd",
@@ -98,6 +123,7 @@ const SOURCE_LABELS = {
   treasury: "미국 재무부",
   sina: "Sina Finance",
   eastmoney: "Eastmoney",
+  "ecos+fred+bis": "한국은행 ECOS · BIS · FRED",
 };
 
 const W = 720;
@@ -138,6 +164,7 @@ const state = {
   rangeDays: 30,
   groups: {
     fx: { payload: null, points: [], error: null },
+    policy: { payload: null, points: [], error: null },
     yields: { payload: null, points: [], error: null },
     futures: { payload: null, points: [], error: null },
   },
@@ -210,6 +237,33 @@ function parseGroup(payload, keys) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function parsePolicy(payload) {
+  const keys = ["kr", "jp", "us_low", "us_high"];
+  const numeric = (value) =>
+    value === null || value === undefined || value === ""
+      ? Number.NaN
+      : Number(value);
+
+  return (Array.isArray(payload?.points) ? payload.points : [])
+    .map((raw) => {
+      const point = { date: String(raw?.date ?? "") };
+      for (const key of keys) {
+        const value = numeric(raw?.[key]);
+        if (Number.isFinite(value)) point[key] = value;
+      }
+      return point;
+    })
+    .filter(
+      (point) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(point.date) &&
+        (Number.isFinite(point.kr) ||
+          Number.isFinite(point.jp) ||
+          (Number.isFinite(point.us_low) &&
+            Number.isFinite(point.us_high))),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 async function fetchPayload(file) {
   const response = await fetch(`data/${file}?t=${Date.now()}`, {
     cache: "no-store",
@@ -223,6 +277,12 @@ async function load() {
 
   const specs = [
     { name: "fx", file: "rates.json", keys: FX_SERIES.map((s) => s.key) },
+    {
+      name: "policy",
+      file: "policy.json",
+      keys: ["kr", "jp", "us_low", "us_high"],
+      parse: parsePolicy,
+    },
     {
       name: "yields",
       file: "yields.json",
@@ -250,7 +310,9 @@ async function load() {
       return;
     }
 
-    const points = parseGroup(result.value, spec.keys);
+    const points = spec.parse
+      ? spec.parse(result.value)
+      : parseGroup(result.value, spec.keys);
     if (points.length === 0) {
       group.error = new Error(`${spec.file}: no valid points`);
       failed.push(spec.name);
@@ -271,7 +333,12 @@ async function load() {
   }
 
   if (failed.length > 0) {
-    const labels = { fx: "환율", yields: "미국 국채", futures: "원자재 선물" };
+    const labels = {
+      fx: "환율",
+      policy: "기준금리",
+      yields: "미국 국채",
+      futures: "원자재 선물",
+    };
     showError(
       `일부 데이터를 불러오지 못했어요: ${failed
         .map((name) => labels[name])
@@ -310,6 +377,7 @@ function asOf(group) {
 function renderAll() {
   renderStamp();
   renderFx();
+  renderPolicy();
   renderYields();
   renderFutures();
   renderCharts();
@@ -318,7 +386,10 @@ function renderAll() {
   const futuresLabel = state.groups.futures.points.length
     ? sourceLabel(state.groups.futures)
     : "Sina Finance";
-  $("source-text").textContent = `${fxLabel} · 미국 재무부 · ${futuresLabel}`;
+  const policyLabel = state.groups.policy.points.length
+    ? sourceLabel(state.groups.policy)
+    : "한국은행 ECOS · BIS · FRED";
+  $("source-text").textContent = `${fxLabel} · 미국 재무부 · ${futuresLabel} · ${policyLabel}`;
   $("source-note").hidden = state.groups.fx.payload?.source !== "frankfurter";
 }
 
@@ -444,6 +515,173 @@ function renderFutures() {
 
   $("futures-asof").textContent = asOf(group);
   setStale("futures", group);
+}
+
+function policyKeys(def) {
+  return def.keys ?? [def.key];
+}
+
+function policyEvents(def) {
+  const keys = policyKeys(def);
+  return state.groups.policy.points.filter((point) =>
+    keys.every((key) => Number.isFinite(point[key])),
+  );
+}
+
+function policyValue(def, point) {
+  if (def.key === "us") {
+    return {
+      text: `${numberFmt.format(point.us_low)}–${numberFmt.format(
+        point.us_high,
+      )}`,
+      number: (point.us_low + point.us_high) / 2,
+    };
+  }
+
+  return {
+    text: numberFmt.format(point[def.key]),
+    number: point[def.key],
+  };
+}
+
+function renderPolicy() {
+  const eventsByCountry = new Map();
+  let latestDate = "";
+
+  for (const def of POLICY_SERIES) {
+    const events = policyEvents(def);
+    eventsByCountry.set(def, events);
+    if (events.length > 0) {
+      const date = events[events.length - 1].date;
+      if (!latestDate || date > latestDate) latestDate = date;
+    }
+  }
+
+  for (const def of POLICY_SERIES) {
+    const events = eventsByCountry.get(def) ?? [];
+    if (events.length === 0) {
+      setCardEmpty(def.card);
+      continue;
+    }
+
+    const latest = events[events.length - 1];
+    const previous = events.length > 1 ? events[events.length - 2] : null;
+    const current = policyValue(def, latest);
+    const rate = $(`${def.card}-rate`);
+    rate.classList.remove("placeholder");
+    rate.textContent = current.text;
+
+    const delta = $(`${def.card}-delta`);
+    const meta = $(`${def.card}-meta`);
+
+    if (!previous) {
+      delta.className = "delta flat";
+      delta.textContent = "첫 기록";
+      meta.textContent = `${formatDate(latest.date)} 시행 · ${def.source}`;
+      continue;
+    }
+
+    const before = policyValue(def, previous);
+    const change = current.number - before.number;
+    const trend =
+      Math.abs(change) < 0.001 ? "flat" : change > 0 ? "up" : "down";
+    const arrow = trend === "up" ? "▲" : trend === "down" ? "▼" : "–";
+    delta.className = `delta ${trend}`;
+    delta.textContent = `${arrow} ${signedFmt.format(change)}%p`;
+    meta.textContent = `${formatDate(latest.date)} 시행 · ${def.source}`;
+  }
+
+  $("policy-asof").textContent = latestDate
+    ? `${formatDate(latestDate)} 기준 · ECOS · BIS · FRED`
+    : "데이터 없음";
+  setStale("policy", state.groups.policy);
+  renderPolicyHistory(eventsByCountry, latestDate);
+}
+
+function renderPolicyHistory(eventsByCountry, latestDate) {
+  const body = $("policy-history");
+  const wrap = $("policy-table-wrap");
+  const empty = $("policy-empty");
+  body.replaceChildren();
+
+  if (!latestDate) {
+    wrap.hidden = true;
+    empty.hidden = false;
+    return;
+  }
+
+  const cutoff = dayNumber(latestDate) - 1095;
+  const rows = [];
+
+  for (const def of POLICY_SERIES) {
+    const events = eventsByCountry.get(def) ?? [];
+    for (let index = 1; index < events.length; index += 1) {
+      const current = events[index];
+      if (dayNumber(current.date) < cutoff) continue;
+
+      const previous = events[index - 1];
+      const before = policyValue(def, previous);
+      const after = policyValue(def, current);
+      rows.push({
+        date: current.date,
+        def,
+        before: before.text,
+        after: after.text,
+        change: after.number - before.number,
+      });
+    }
+  }
+
+  rows.sort(
+    (a, b) =>
+      b.date.localeCompare(a.date) ||
+      POLICY_SERIES.indexOf(a.def) - POLICY_SERIES.indexOf(b.def),
+  );
+
+  if (rows.length === 0) {
+    wrap.hidden = true;
+    empty.hidden = false;
+    return;
+  }
+
+  wrap.hidden = false;
+  empty.hidden = true;
+
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+
+    const country = document.createElement("td");
+    const label = document.createElement("span");
+    label.className = "policy-country";
+    const dot = document.createElement("i");
+    dot.className = `dot ${row.def.dot}`;
+    dot.setAttribute("aria-hidden", "true");
+    label.append(dot, document.createTextNode(row.def.label));
+    country.append(label);
+
+    const date = document.createElement("td");
+    date.textContent = formatDate(row.date);
+
+    const before = document.createElement("td");
+    before.textContent = `${row.before}%`;
+
+    const after = document.createElement("td");
+    after.textContent = `${row.after}%`;
+
+    const change = document.createElement("td");
+    const trend =
+      Math.abs(row.change) < 0.001
+        ? "flat"
+        : row.change > 0
+          ? "up"
+          : "down";
+    const arrow = trend === "up" ? "▲" : trend === "down" ? "▼" : "–";
+    change.className = `policy-change ${trend}`;
+    change.textContent = `${arrow} ${signedFmt.format(row.change)}%p`;
+
+    tr.append(country, date, before, after, change);
+    body.append(tr);
+  }
 }
 
 function renderCharts() {
