@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "policy",
-  "updatedAt": "2026-11-19T07:30:15+09:00",
+  "updatedAt": "2026-11-19T07:50:14+09:00",
   "source": "ecos+fred+bis",
   "series": [
     "kr",
