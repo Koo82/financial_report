@@ -85,9 +85,21 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: uv run financial-report fetch-policy --data data/policy.json
 
+      - name: Fetch Core PCE
+        continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          args=(--data data/pce.json --skip-if-fresh 180)
+          if [ "${FORCE}" = "true" ]; then
+            args+=(--force)
+          fi
+          uv run financial-report fetch-pce "${args[@]}"
+
       - name: Commit history
         run: |
-          git add data/rates.json data/yields.json data/futures.json data/policy.json
+          git add data/
           if git diff --cached --quiet; then
             echo "No market changes to commit."
             exit 0
@@ -103,7 +115,7 @@ jobs:
           rm -rf _site
           mkdir -p _site/data
           cp -r site/. _site/
-          cp data/rates.json data/yields.json data/futures.json data/policy.json _site/data/
+          cp data/*.json _site/data/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

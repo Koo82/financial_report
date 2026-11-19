@@ -72,6 +72,23 @@ const POLICY_SERIES = [
   },
 ];
 
+const PCE_SERIES = [
+  {
+    key: "core_pce_yoy",
+    label: "근원 PCE",
+    card: "pce-yoy",
+    cssVar: "--pce",
+    format: "percent",
+  },
+  {
+    key: "core_pce_mom",
+    label: "전월비",
+    card: "pce-mom",
+    cssVar: "--pce",
+    format: "percent",
+  },
+];
+
 const CHARTS = [
   {
     id: "usd",
@@ -93,6 +110,15 @@ const CHARTS = [
     series: YIELD_SERIES,
     area: false,
     legend: null,
+  },
+  {
+    id: "pce",
+    group: "pce",
+    series: [PCE_SERIES[0]],
+    area: true,
+    legend: "legend-pce",
+    range: "pce",
+    target: 2,
   },
   {
     id: "gold",
@@ -117,6 +143,13 @@ const RANGE_LABELS = {
   1095: "최근 3년",
 };
 
+const PCE_RANGE_LABELS = {
+  365: "최근 1년",
+  1095: "최근 3년",
+  1825: "최근 5년",
+  3650: "최근 10년",
+};
+
 const SOURCE_LABELS = {
   yahoo: "Yahoo Finance",
   frankfurter: "ECB 기준환율",
@@ -124,6 +157,7 @@ const SOURCE_LABELS = {
   sina: "Sina Finance",
   eastmoney: "Eastmoney",
   "ecos+fred+bis": "한국은행 ECOS · BIS · FRED",
+  fred: "FRED · BEA",
 };
 
 const W = 720;
@@ -160,11 +194,19 @@ const dateFmt = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "UTC",
 });
 
+const monthFmt = new Intl.DateTimeFormat("ko-KR", {
+  year: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
 const state = {
   rangeDays: 30,
+  pceRangeDays: 1095,
   groups: {
     fx: { payload: null, points: [], error: null },
     policy: { payload: null, points: [], error: null },
+    pce: { payload: null, points: [], error: null },
     yields: { payload: null, points: [], error: null },
     futures: { payload: null, points: [], error: null },
   },
@@ -195,6 +237,12 @@ function formatUpdated(iso) {
   return updatedFmt.format(parsed);
 }
 
+function formatMonth(iso) {
+  const [year, month] = String(iso).split("-").map(Number);
+  if (!year || !month) return String(iso);
+  return monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 function formatValue(series, value) {
   if (series.format === "percent") return `${numberFmt.format(value)}%`;
   if (series.format === "usd") return `$${numberFmt.format(value)}`;
@@ -212,11 +260,11 @@ function latestPair(group) {
   };
 }
 
-function rangePoints(group) {
+function rangePoints(group, days = state.rangeDays) {
   const points = group?.points ?? [];
   if (points.length === 0) return [];
   const end = dayNumber(points[points.length - 1].date);
-  const cutoff = end - state.rangeDays + 1;
+  const cutoff = end - days + 1;
   return points.filter((point) => dayNumber(point.date) >= cutoff);
 }
 
@@ -264,6 +312,27 @@ function parsePolicy(payload) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function parsePce(payload) {
+  const keys = PCE_SERIES.map((series) => series.key);
+  const numeric = (value) =>
+    value === null || value === undefined || value === ""
+      ? Number.NaN
+      : Number(value);
+
+  return (Array.isArray(payload?.points) ? payload.points : [])
+    .map((raw) => {
+      const point = { date: String(raw?.date ?? "") };
+      for (const key of keys) point[key] = numeric(raw?.[key]);
+      return point;
+    })
+    .filter(
+      (point) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(point.date) &&
+        keys.every((key) => Number.isFinite(point[key])),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 async function fetchPayload(file) {
   const response = await fetch(`data/${file}?t=${Date.now()}`, {
     cache: "no-store",
@@ -282,6 +351,12 @@ async function load() {
       file: "policy.json",
       keys: ["kr", "jp", "us_low", "us_high"],
       parse: parsePolicy,
+    },
+    {
+      name: "pce",
+      file: "pce.json",
+      keys: PCE_SERIES.map((series) => series.key),
+      parse: parsePce,
     },
     {
       name: "yields",
@@ -336,6 +411,7 @@ async function load() {
     const labels = {
       fx: "환율",
       policy: "기준금리",
+      pce: "미국 물가",
       yields: "미국 국채",
       futures: "원자재 선물",
     };
@@ -378,6 +454,7 @@ function renderAll() {
   renderStamp();
   renderFx();
   renderPolicy();
+  renderPce();
   renderYields();
   renderFutures();
   renderCharts();
@@ -389,7 +466,10 @@ function renderAll() {
   const policyLabel = state.groups.policy.points.length
     ? sourceLabel(state.groups.policy)
     : "한국은행 ECOS · BIS · FRED";
-  $("source-text").textContent = `${fxLabel} · 미국 재무부 · ${futuresLabel} · ${policyLabel}`;
+  const pceLabel = state.groups.pce.points.length
+    ? sourceLabel(state.groups.pce)
+    : "FRED · BEA";
+  $("source-text").textContent = `${fxLabel} · ${policyLabel} · ${pceLabel} · 미국 재무부 · ${futuresLabel}`;
   $("source-note").hidden = state.groups.fx.payload?.source !== "frankfurter";
 }
 
@@ -418,14 +498,24 @@ function setCardEmpty(card) {
   $(`${card}-meta`).textContent = "데이터 없음";
 }
 
-function renderDelta(card, latest, previous, series, mode, epsilon) {
+function renderDelta(
+  card,
+  latest,
+  previous,
+  series,
+  mode,
+  epsilon,
+  options = {},
+) {
+  const period = options.period ?? "전일";
+  const format = options.format ?? formatDate;
   const delta = $(`${card}-delta`);
   const meta = $(`${card}-meta`);
   delta.replaceChildren();
 
   if (!previous) {
     delta.className = "delta flat";
-    delta.textContent = "전일 데이터 없음";
+    delta.textContent = `${period} 데이터 없음`;
     meta.textContent = "비교할 이전 데이터가 없습니다";
     return;
   }
@@ -454,7 +544,7 @@ function renderDelta(card, latest, previous, series, mode, epsilon) {
     delta.append(pct);
   }
 
-  meta.textContent = `전일(${formatDate(previous.date)}) 대비`;
+  meta.textContent = `${period}(${format(previous.date)}) 대비`;
 }
 
 function renderFx() {
@@ -598,6 +688,35 @@ function renderPolicy() {
   renderPolicyHistory(eventsByCountry, latestDate);
 }
 
+function pceAsOf(group) {
+  if (group.points.length === 0) return "데이터 없음";
+  const latest = group.points[group.points.length - 1];
+  return `${sourceLabel(group)} · ${formatMonth(latest.date)} 기준`;
+}
+
+function renderPce() {
+  const group = state.groups.pce;
+  const { latest, previous } = latestPair(group);
+
+  for (const series of PCE_SERIES) {
+    if (!latest || !Number.isFinite(latest[series.key])) {
+      setCardEmpty(series.card);
+      continue;
+    }
+
+    const rate = $(`${series.card}-rate`);
+    rate.classList.remove("placeholder");
+    rate.textContent = numberFmt.format(latest[series.key]);
+    renderDelta(series.card, latest, previous, series, "percent", 0.005, {
+      period: "전월",
+      format: formatMonth,
+    });
+  }
+
+  $("pce-asof").textContent = pceAsOf(group);
+  setStale("pce", group);
+}
+
 function renderPolicyHistory(eventsByCountry, latestDate) {
   const body = $("policy-history");
   const wrap = $("policy-table-wrap");
@@ -687,26 +806,33 @@ function renderPolicyHistory(eventsByCountry, latestDate) {
 function renderCharts() {
   $("range-label").textContent =
     RANGE_LABELS[state.rangeDays] ?? `최근 ${state.rangeDays}일`;
+  $("pce-range-label").textContent =
+    PCE_RANGE_LABELS[state.pceRangeDays] ??
+    `최근 ${state.pceRangeDays}일`;
 
   for (const chart of CHARTS) {
-    renderChart(chart, rangePoints(state.groups[chart.group]));
+    const days =
+      chart.range === "pce" ? state.pceRangeDays : state.rangeDays;
+    renderChart(chart, rangePoints(state.groups[chart.group], days));
   }
 
-  renderAxis("fx", state.groups.fx);
-  renderAxis("yields", state.groups.yields);
-  renderAxis("futures", state.groups.futures);
+  renderAxis("fx", state.groups.fx, state.rangeDays);
+  renderAxis("pce", state.groups.pce, state.pceRangeDays);
+  renderAxis("yields", state.groups.yields, state.rangeDays);
+  renderAxis("futures", state.groups.futures, state.rangeDays);
 }
 
-function renderAxis(prefix, group) {
-  const points = rangePoints(group);
+function renderAxis(prefix, group, days = state.rangeDays) {
+  const points = rangePoints(group, days);
   const start = $(`axis-${prefix}-start`);
   const mid = $(`axis-${prefix}-mid`);
   const end = $(`axis-${prefix}-end`);
   if (!start || !mid || !end) return;
 
-  start.textContent = points.length ? formatDate(points[0].date) : "—";
+  const format = prefix === "pce" ? formatMonth : formatDate;
+  start.textContent = points.length ? format(points[0].date) : "—";
   end.textContent = points.length
-    ? formatDate(points[points.length - 1].date)
+    ? format(points[points.length - 1].date)
     : "—";
 
   if (points.length < 3) {
@@ -729,7 +855,7 @@ function renderAxis(prefix, group) {
   }
 
   mid.hidden = false;
-  mid.textContent = formatDate(nearest.date);
+  mid.textContent = format(nearest.date);
 }
 
 function renderChart(chart, points) {
@@ -772,6 +898,11 @@ function renderChart(chart, points) {
         rawMax = Math.max(rawMax, value);
       }
     }
+  }
+
+  if (Number.isFinite(chart.target)) {
+    rawMin = Math.min(rawMin, chart.target);
+    rawMax = Math.max(rawMax, chart.target);
   }
 
   const spread = rawMax - rawMin;
@@ -842,6 +973,20 @@ function renderChart(chart, points) {
       1,
     )},${baseline} Z`;
     markup += `<path d="${areaPath}" fill="url(#fill-${chart.id})" />`;
+  }
+
+  if (Number.isFinite(chart.target)) {
+    const targetY = yAt(chart.target);
+    markup += `<line x1="${PAD.left}" y1="${targetY.toFixed(
+      1,
+    )}" x2="${W - PAD.right}" y2="${targetY.toFixed(
+      1,
+    )}" stroke="${faintColor}" stroke-width="1" stroke-dasharray="4 4" opacity="0.85" />`;
+    markup += `<text x="${W - PAD.right}" y="${(targetY - 4).toFixed(
+      1,
+    )}" text-anchor="end" fill="${faintColor}" font-size="10">${
+      chart.target
+    }%</text>`;
   }
 
   for (const path of paths) {
@@ -980,7 +1125,8 @@ function updateHover(id, event) {
 
   const dateNode = document.createElement("span");
   dateNode.className = "tt-date";
-  dateNode.textContent = formatDate(point.date);
+  dateNode.textContent =
+    chart.chart.range === "pce" ? formatMonth(point.date) : formatDate(point.date);
   tooltip.append(dateNode);
 
   for (const item of chart.series) {
@@ -1032,6 +1178,19 @@ function bindEvents() {
           node.classList.toggle("active", node === button),
         );
       for (const chart of CHARTS) hideHover(chart.id);
+      renderCharts();
+    });
+  });
+
+  document.querySelectorAll("[data-pce-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.pceRangeDays = Number(button.dataset.pceRange);
+      document
+        .querySelectorAll("[data-pce-range]")
+        .forEach((node) =>
+          node.classList.toggle("active", node === button),
+        );
+      hideHover("pce");
       renderCharts();
     });
   });

@@ -9,7 +9,7 @@ from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 
-from . import frankfurter, markets, policy, store, yahoo
+from . import frankfurter, markets, pce, policy, store, yahoo
 
 Source = tuple[str, Callable[[], list[store.Point]]]
 
@@ -121,7 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="financial-report",
         description=(
             "Fetch daily exchange rates, US Treasury yields, commodity "
-            "futures, and central-bank policy rates."
+            "futures, central-bank policy rates, and Core PCE inflation."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -232,6 +232,40 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the merged JSON without writing the file",
     )
+
+    pce_parser = subparsers.add_parser(
+        "fetch-pce",
+        help="fetch monthly Core PCE inflation",
+    )
+    pce_parser.add_argument(
+        "--data",
+        default="data/pce.json",
+        help="history file to update (default: data/pce.json)",
+    )
+    pce_parser.add_argument(
+        "--days",
+        type=_positive_int,
+        default=None,
+        metavar="N",
+        help="history window in days (default: 3650, about ten years)",
+    )
+    pce_parser.add_argument(
+        "--skip-if-fresh",
+        type=int,
+        default=0,
+        metavar="MINUTES",
+        help="skip when the file was updated less than MINUTES ago",
+    )
+    pce_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="ignore --skip-if-fresh",
+    )
+    pce_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the merged JSON without writing the file",
+    )
     return parser
 
 
@@ -242,6 +276,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return policy.run_fetch_policy(
             args.data,
             days=args.days,
+            dry_run=args.dry_run,
+        )
+
+    if args.command == "fetch-pce":
+        return pce.run_fetch_pce(
+            args.data,
+            days=args.days,
+            skip_if_fresh=args.skip_if_fresh,
+            force=args.force,
             dry_run=args.dry_run,
         )
 

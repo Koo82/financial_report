@@ -15,7 +15,7 @@
     />
     <meta
       name="description"
-      content="환율, 기준금리, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
+      content="환율, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
     />
     <title>오늘의 시장</title>
     <link rel="manifest" href="manifest.webmanifest" />
@@ -220,6 +220,92 @@
           <p class="chart-empty" id="policy-empty" hidden>
             표시할 변경 이력이 아직 없어요.
           </p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="pce-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="pce-title">미국 물가</h2>
+            <span class="stale-badge" id="pce-stale" hidden>갱신 지연</span>
+          </div>
+          <p class="section-sub" id="pce-asof">—</p>
+        </div>
+
+        <div class="cards">
+          <article class="card card--compact card--pce-yoy">
+            <div class="card-head">
+              <h3>근원 PCE</h3>
+              <span class="code">전년동월비</span>
+            </div>
+            <p class="rate">
+              <span id="pce-yoy-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="pce-yoy-delta">—</p>
+            <p class="card-meta" id="pce-yoy-meta">—</p>
+          </article>
+
+          <article class="card card--compact card--pce-mom">
+            <div class="card-head">
+              <h3>근원 PCE</h3>
+              <span class="code">전월비</span>
+            </div>
+            <p class="rate">
+              <span id="pce-mom-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="pce-mom-delta">—</p>
+            <p class="card-meta" id="pce-mom-meta">—</p>
+          </article>
+        </div>
+
+        <div class="panel chart-panel" aria-label="근원 PCE 상승률 추이">
+          <div class="panel-head">
+            <div>
+              <h3>최근 추이</h3>
+              <p class="panel-sub" id="pce-range-label">최근 3년</p>
+            </div>
+            <div class="segmented" role="group" aria-label="PCE 기간 선택">
+              <button type="button" data-pce-range="365">1년</button>
+              <button type="button" data-pce-range="1095" class="active">
+                3년
+              </button>
+              <button type="button" data-pce-range="1825">5년</button>
+              <button type="button" data-pce-range="3650">10년</button>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--pce"></span>
+                <span>근원 PCE</span>
+                <span class="chart-unit">전년동월비</span>
+                <strong id="legend-pce">—</strong>
+              </p>
+              <p class="chart-range" id="range-pce">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-pce"
+                class="chart-svg"
+                role="img"
+                aria-label="미국 근원 PCE 전년동월비 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-pce" hidden></div>
+              <p class="chart-empty" id="empty-pce" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-axis" aria-hidden="true">
+            <span id="axis-pce-start">—</span>
+            <span class="axis-mid" id="axis-pce-mid" hidden>—</span>
+            <span id="axis-pce-end">—</span>
+          </div>
         </div>
       </section>
 
@@ -445,8 +531,9 @@
         <p>
           국채 금리는 미국 재무부 고시 par yield, 선물은 최근월물 연속 계약의
           종가입니다. 기준금리는 한국은행·일본은행·미국 연준의 정책금리이며,
-          미국은 목표범위로 표시합니다. 표시된 값은 참고용이며 실제 거래
-          가격과 다를 수 있습니다.
+          미국은 목표범위로 표시합니다. 근원 PCE는 미국 경제분석국(BEA)이
+          발표하는 월별 개인소비지출 물가지수에서 계산한 전년동월비·전월비입니다.
+          표시된 값은 참고용이며 실제 거래 가격과 다를 수 있습니다.
         </p>
       </footer>
     </main>

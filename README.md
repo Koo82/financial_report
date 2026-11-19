@@ -1,13 +1,16 @@
 # 오늘의 시장
 
-환율, 기준금리, 미국 국채 금리, 금과 원유 선물을 매일 한 번 갱신해서 보여주는 정적
-대시보드입니다. GitHub Actions가 하루 두 번 데이터를 받아 `data/` 아래 JSON에
-쌓고, GitHub Pages로 배포합니다. iPad에서는 Safari로 열고 **홈 화면에 추가**하면
-앱처럼 사용할 수 있습니다.
+환율, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을 매일 한 번
+갱신해서 보여주는 정적 대시보드입니다. GitHub Actions가 하루 두 번 데이터를 받아
+`data/` 아래 JSON에 쌓고, GitHub Pages로 배포합니다. iPad에서는 Safari로 열고
+**홈 화면에 추가**하면 앱처럼 사용할 수 있습니다.
 
-- 서버, 데이터베이스, API 키가 필요 없습니다.
-- 30일 / 90일 / 1년 / 3년 추이 차트, 전일 대비 등락, 다크 모드를 지원합니다.
-- 모든 차트가 하나의 기간 선택 버튼으로 함께 움직입니다.
+- 서버나 데이터베이스가 필요 없고, 기준금리·근원 PCE만 무료 API 키를 사용합니다.
+- 일별 지표는 30일 / 90일 / 1년 / 3년 추이 차트를, 월별 근원 PCE는 1년 / 3년 /
+  5년 / 10년 차트를 지원합니다.
+- 전일 대비 등락과 다크 모드를 지원합니다.
+- 일별 차트는 하나의 기간 선택 버튼으로 함께 움직이고, 근원 PCE는 별도 버튼을
+  사용합니다.
 - 원/엔은 **100엔 기준**으로 표시합니다.
 
 ## 표시 항목
@@ -16,6 +19,7 @@
 | --- | --- | --- |
 | 환율 | 원/달러(USD/KRW), 원/엔(100엔, JPY/KRW) | Yahoo Finance → ECB 기준환율 |
 | 기준금리 | 한국은행 기준금리, 일본은행 정책금리, 미국 연준 목표범위 | 한국은행 ECOS, BIS, FRED |
+| 미국 물가 | 근원 PCE 전년동월비, 전월비 | FRED · BEA |
 | 미국 국채 | 5년물, 10년물, 30년물 par yield(%) | 미국 재무부 |
 | 원자재 선물 | 금(GC), WTI 원유(CL), 브렌트 원유(OIL) | Sina Finance → Eastmoney |
 
@@ -23,6 +27,8 @@
   표시합니다. 일본은 BOJ 자체 API가 정책목표가 아닌 실제 콜금리만 제공하므로
   BIS 중앙은행 정책금리 데이터를 사용합니다.
 - 국채 금리는 미국 재무부가 고시하는 **par yield**입니다.
+- 근원 PCE는 미국 경제분석국(BEA)의 월별 PCE 물가지수(식료품·에너지 제외)에서
+  전년동월비·전월비를 계산합니다.
 - 선물 가격은 최근월물 연속 계약의 **종가**이며, 진행 중인 당일 세션은
   제외합니다.
 - ETF나 현물 대체 지표는 사용하지 않습니다.
@@ -33,6 +39,7 @@
 .github/workflows/daily-rates.yml  # 월-토 09:00 KST 전후 갱신, 데이터 커밋, Pages 배포
 data/rates.json                    # 누적된 일별 환율
 data/policy.json                   # 한국/일본/미국 기준금리 변경 이력
+data/pce.json                      # 월별 근원 PCE 지수와 전년동월비/전월비
 data/yields.json                   # 누적된 미국 국채 5/10/30년 금리
 data/futures.json                  # 누적된 금/WTI/브렌트 선물 종가
 site/                              # 정적 대시보드 (index.html, app.js, styles.css)
@@ -40,14 +47,15 @@ src/financial_report/              # 수집/병합 CLI
 tests/                             # 단위 테스트
 ```
 
-세 데이터 파일은 각각 약 3년치를 보관합니다. 한 그룹의 출처가 실패해도 기존
-파일은 그대로 유지되며, 화면에는 마지막 데이터와 함께 **갱신 지연** 배지가
-표시됩니다.
+시장 데이터 파일은 각각 약 3년치를, 근원 PCE는 약 10년치를 보관합니다. 한 그룹의
+출처가 실패해도 기존 파일은 그대로 유지되며, 화면에는 마지막 데이터와 함께
+**갱신 지연** 배지가 표시됩니다.
 
 ## 로컬에서 실행
 
-기준금리 수집에는 무료 API 키 두 개가 필요합니다. [한국은행
-ECOS](https://ecos.bok.or.kr/api/)와 [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)에서
+기준금리와 근원 PCE 수집에는 무료 API 키가 필요합니다. 한국 기준금리는
+[한국은행 ECOS](https://ecos.bok.or.kr/api/) 키를, 미국 기준금리와 근원 PCE는
+[FRED](https://fred.stlouisfed.org/docs/api/api_key.html) 키를 사용합니다.
 발급받아 환경변수로 지정합니다. 키가 없어도 환율·국채·선물은 정상 동작합니다.
 
 ```bash
@@ -65,9 +73,12 @@ uv run financial-report fetch-markets --data-dir data
 # 3) 기준금리 받아오기
 uv run financial-report fetch-policy --data data/policy.json
 
-# 4) 미리보기
+# 4) 근원 PCE 받아오기
+uv run financial-report fetch-pce --data data/pce.json
+
+# 5) 미리보기
 mkdir -p site/data
-cp data/rates.json data/policy.json data/yields.json data/futures.json site/data/
+cp data/rates.json data/policy.json data/pce.json data/yields.json data/futures.json site/data/
 python3 -m http.server 8000 -d site
 ```
 
@@ -101,11 +112,22 @@ uv run financial-report fetch-policy --data data/policy.json
 uv run financial-report fetch-policy --days 3650 --dry-run  # 10년치, 결과만 확인
 ```
 
-기존에 1년치만 있던 데이터에 3년치를 더하려면 각각 한 번만 실행하면 됩니다.
+`fetch-pce`는 FRED에서 월별 근원 PCE 지수를 받아 전년동월비·전월비를 계산합니다.
+지수와 상승률을 함께 저장하므로, 이후 갱신에서도 과거 값을 다시 계산할 필요가
+없습니다.
+
+```bash
+uv run financial-report fetch-pce --data data/pce.json
+uv run financial-report fetch-pce --days 3650 --dry-run  # 10년치, 결과만 확인
+uv run financial-report fetch-pce --skip-if-fresh 180    # 3시간 내 갱신됐으면 건너뜀
+```
+
+기존 데이터를 더 길게 채우려면 각각 한 번만 실행하면 됩니다.
 
 ```bash
 uv run financial-report fetch --data data/rates.json --source frankfurter --days 1200 --force
 uv run financial-report fetch-markets --data-dir data --days 1200 --force
+uv run financial-report fetch-pce --data data/pce.json --days 3650 --force
 ```
 
 ## GitHub Pages 배포
@@ -123,9 +145,9 @@ uv run financial-report fetch-markets --data-dir data --days 1200 --force
 
 3. 저장소 **Settings → Pages → Build and deployment → Source**에서
    **GitHub Actions**를 선택합니다.
-4. **Settings → Secrets and variables → Actions**에 기준금리용 키를 추가합니다.
+4. **Settings → Secrets and variables → Actions**에 API 키를 추가합니다.
    - `ECOS_API_KEY`: 한국은행 ECOS API 키
-   - `FRED_API_KEY`: FRED API 키
+   - `FRED_API_KEY`: 미국 기준금리·근원 PCE용 FRED API 키
 5. **Actions** 탭 → `Daily market data` → **Run workflow**를 한 번 실행합니다.
    첫 push 시점에는 Pages 설정이 없어 배포가 한 번 실패할 수 있습니다. 3번을
    마친 뒤 다시 실행하면 됩니다. 첫 실행이 끝나면
@@ -135,7 +157,7 @@ uv run financial-report fetch-markets --data-dir data --days 1200 --force
 이후에는 월-토 09:00 KST 전후에 자동으로 갱신됩니다. GitHub의 예약 실행이
 평소 8~9시간 늦게 시작되는 점을 감안해 cron을 00:00/01:00 KST(전날 15:00/16:00
 UTC, 일-금)로 잡았습니다. 지연이 없어지면 실행 시각도 그만큼 앞당겨지며, 01:00
-KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 네 데이터 파일을
+KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크플로는 데이터 파일을
 모두 커밋하고 `_site/data/`에 복사한 뒤 Pages로 배포합니다.
 
 ## 데이터에 대해
@@ -148,6 +170,10 @@ KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크�
   상·하한, 일본은 BIS 중앙은행 정책금리(일본은행 발표 기준)를 사용합니다.
   금리가 바뀐 날짜만 이력으로 저장하며, 화면에는 최근 3년간의 변경 이력을
   표시합니다. 한 국가의 출처가 실패해도 나머지 국가의 이력은 유지됩니다.
+- **근원 PCE**: FRED의 `PCEPILFE`(식료품·에너지 제외 PCE 연쇄가격지수,
+  월별·계절조정)를 사용합니다. 지수에서 전년동월비·전월비를 계산하며, BEA 발표
+  일정에 따라 최신 관측치는 전월 이전일 수 있습니다. 화면에는 관측 월을
+  표시합니다.
 - **미국 국채**: 미국 재무부 일별 금리 CSV를 사용합니다. 미국 공휴일에는 새
   고시가 없어 직전 값이 유지됩니다. 2026-11-11은 재향군인의 날이라 최신 값이
   11-10입니다.
@@ -171,11 +197,12 @@ Eastmoney는 호스트별로 간헐적으로 차단됩니다. 수집기는 `push
 `push2delay` → `push2` 순서로 호스트를 바꿔가며 재시도하고, 모두 실패하면
 Sina 데이터를 유지합니다.
 
-**기준금리가 갱신되지 않는 경우**
+**기준금리나 근원 PCE가 갱신되지 않는 경우**
 `ECOS_API_KEY`와 `FRED_API_KEY`가 설정되어 있는지 확인합니다. 로컬에서는
 `export`로 지정하고, Actions에서는 저장소 Secrets에 같은 이름으로 추가합니다.
 키가 없으면 한국(ECOS)과 미국(FRED)만 건너뛰고 일본(BIS)은 계속 갱신됩니다.
-모든 출처가 실패하면 기존 `data/policy.json`을 그대로 둡니다.
+근원 PCE도 같은 `FRED_API_KEY`를 사용하며, 실패하면 기존 `data/pce.json`을
+그대로 둡니다. 모든 출처가 실패하면 기존 `data/policy.json`도 유지됩니다.
 
 **Actions가 멈춘 경우**
 GitHub는 저장소에 60일간 변경이 없으면 예약 워크플로를 비활성화합니다. 이

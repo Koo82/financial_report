@@ -28,6 +28,7 @@
   --gold: #ca8a04;
   --wti: #0f766e;
   --brent: #be185d;
+  --pce: #db2777;
 
   --chart-grid: rgba(100, 116, 139, 0.18);
   --tooltip-bg: #0f172a;
@@ -66,6 +67,7 @@
     --gold: #facc15;
     --wti: #34d399;
     --brent: #f472b6;
+    --pce: #fb7185;
 
     --chart-grid: rgba(150, 165, 189, 0.16);
     --tooltip-bg: #e8eefc;
@@ -328,6 +330,11 @@ h1 {
   --accent: var(--brent);
 }
 
+.card--pce-yoy,
+.card--pce-mom {
+  --accent: var(--pce);
+}
+
 .card--compact {
   padding: 16px 16px 14px;
 }
@@ -578,6 +585,10 @@ h1 {
 
 .dot--brent {
   background: var(--brent);
+}
+
+.dot--pce {
+  background: var(--pce);
 }
 
 .chart-legend {
