@@ -1,4 +1,4 @@
-"""Fetch daily USD/KRW and JPY/KRW quotes from Yahoo Finance.
+"""Fetch daily USD/KRW, JPY/KRW, and USD/JPY quotes from Yahoo Finance.
 
 Yahoo's chart endpoint is unofficial and aggressively rate limits shared IPs,
 so every request tries both query hosts and retries with backoff. The caller
@@ -24,6 +24,7 @@ HOSTS = (
 SYMBOLS = {
     "usd": "USDKRW=X",
     "jpy": "JPYKRW=X",
+    "usdjpy": "USDJPY=X",
 }
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -115,29 +116,62 @@ def parse_chart_payload(payload: Mapping[str, Any]) -> dict[str, float]:
 def align_series(
     usd: Mapping[str, float],
     jpy: Mapping[str, float],
+    usdjpy: Mapping[str, float],
 ) -> list[Point]:
-    """Join both series, forward-filling a side that has no quote that day."""
+    """Join the three series, forward-filling any side without a quote."""
 
     points: list[Point] = []
     last_usd: float | None = None
     last_jpy: float | None = None
+    last_usdjpy: float | None = None
 
-    for day in sorted(set(usd) | set(jpy)):
+    for day in sorted(set(usd) | set(jpy) | set(usdjpy)):
         if day in usd:
             last_usd = usd[day]
         if day in jpy:
             last_jpy = jpy[day]
-        if last_usd is None or last_jpy is None:
+        if day in usdjpy:
+            last_usdjpy = usdjpy[day]
+        if last_usd is None or last_jpy is None or last_usdjpy is None:
             continue
         points.append(
             Point(
                 date=day,
                 usd_krw=round(last_usd, 4),
                 jpy_krw_100=round(last_jpy * 100, 4),
+                usd_jpy=round(last_usdjpy, 4),
             )
         )
 
     return points
+
+
+def _fetch_series(
+    symbol: str,
+    days: int,
+    interval: str,
+    *,
+    timeout: float,
+    attempts: int,
+    sleep: Callable[[float], None] | None,
+) -> dict[str, float]:
+    end = int(time.time())
+    start = end - days * 86_400
+
+    payload = _get_json(
+        f"/v8/finance/chart/{symbol}",
+        {
+            "period1": str(start),
+            "period2": str(end + 86_400),
+            "interval": interval,
+            "includePrePost": "false",
+            "events": "div,split",
+        },
+        timeout=timeout,
+        attempts=attempts,
+        sleep=sleep,
+    )
+    return parse_chart_payload(payload)
 
 
 def fetch_points(
@@ -148,26 +182,37 @@ def fetch_points(
     attempts: int = 3,
     sleep: Callable[[float], None] | None = None,
 ) -> list[Point]:
-    """Fetch both symbols for the last ``days`` and return aligned points."""
-
-    end = int(time.time())
-    start = end - days * 86_400
+    """Fetch all symbols for the last ``days`` and return aligned points."""
 
     series: dict[str, dict[str, float]] = {}
     for key, symbol in SYMBOLS.items():
-        payload = _get_json(
-            f"/v8/finance/chart/{symbol}",
-            {
-                "period1": str(start),
-                "period2": str(end + 86_400),
-                "interval": interval,
-                "includePrePost": "false",
-                "events": "div,split",
-            },
+        series[key] = _fetch_series(
+            symbol,
+            days,
+            interval,
             timeout=timeout,
             attempts=attempts,
             sleep=sleep,
         )
-        series[key] = parse_chart_payload(payload)
 
-    return align_series(series["usd"], series["jpy"])
+    return align_series(series["usd"], series["jpy"], series["usdjpy"])
+
+
+def fetch_usdjpy(
+    days: int = 1200,
+    interval: str = "1d",
+    *,
+    timeout: float = 15.0,
+    attempts: int = 3,
+    sleep: Callable[[float], None] | None = None,
+) -> dict[str, float]:
+    """Fetch ``{date: USD/JPY}`` for the last ``days`` from Yahoo."""
+
+    return _fetch_series(
+        SYMBOLS["usdjpy"],
+        days,
+        interval,
+        timeout=timeout,
+        attempts=attempts,
+        sleep=sleep,
+    )

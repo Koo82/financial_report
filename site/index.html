@@ -57,10 +57,10 @@
           <p class="section-sub" id="fx-asof">—</p>
         </div>
 
-        <div class="cards">
+        <div class="cards cards--fx">
           <article class="card card--usd">
             <div class="card-head">
-              <h3>원/달러</h3>
+              <h3>달러/원</h3>
               <span class="code">USD/KRW</span>
             </div>
             <p class="rate">
@@ -73,7 +73,7 @@
 
           <article class="card card--jpy">
             <div class="card-head">
-              <h3>원/엔</h3>
+              <h3>엔/원</h3>
               <span class="code">JPY/KRW · 100엔</span>
             </div>
             <p class="rate">
@@ -82,6 +82,19 @@
             </p>
             <p class="delta flat" id="jpy-delta">—</p>
             <p class="card-meta" id="jpy-meta">—</p>
+          </article>
+
+          <article class="card card--usdjpy">
+            <div class="card-head">
+              <h3>달러/엔</h3>
+              <span class="code">USD/JPY</span>
+            </div>
+            <p class="rate">
+              <span id="usdjpy-rate" class="placeholder">—</span
+              ><span class="unit">엔</span>
+            </p>
+            <p class="delta flat" id="usdjpy-delta">—</p>
+            <p class="card-meta" id="usdjpy-meta">—</p>
           </article>
         </div>
 
@@ -94,7 +107,7 @@
             <div class="chart-head">
               <p class="chart-name">
                 <span class="dot dot--usd"></span>
-                <span>원/달러</span>
+                <span>달러/원</span>
                 <strong id="legend-usd">—</strong>
               </p>
               <p class="chart-range" id="range-usd">—</p>
@@ -104,7 +117,7 @@
                 id="chart-usd"
                 class="chart-svg"
                 role="img"
-                aria-label="원/달러 최근 환율 추이 선 그래프"
+                aria-label="달러/원 최근 환율 추이 선 그래프"
                 viewBox="0 0 720 180"
               ></svg>
               <div class="chart-tooltip" id="tooltip-usd" hidden></div>
@@ -118,7 +131,7 @@
             <div class="chart-head">
               <p class="chart-name">
                 <span class="dot dot--jpy"></span>
-                <span>원/엔</span>
+                <span>엔/원</span>
                 <span class="chart-unit">100엔</span>
                 <strong id="legend-jpy">—</strong>
               </p>
@@ -129,11 +142,35 @@
                 id="chart-jpy"
                 class="chart-svg"
                 role="img"
-                aria-label="원/엔 최근 환율 추이 선 그래프"
+                aria-label="엔/원 최근 환율 추이 선 그래프"
                 viewBox="0 0 720 180"
               ></svg>
               <div class="chart-tooltip" id="tooltip-jpy" hidden></div>
               <p class="chart-empty" id="empty-jpy" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--usdjpy"></span>
+                <span>달러/엔</span>
+                <strong id="legend-usdjpy">—</strong>
+              </p>
+              <p class="chart-range" id="range-usdjpy">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-usdjpy"
+                class="chart-svg"
+                role="img"
+                aria-label="달러/엔 최근 환율 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-usdjpy" hidden></div>
+              <p class="chart-empty" id="empty-usdjpy" hidden>
                 표시할 데이터가 아직 충분하지 않아요.
               </p>
             </div>
@@ -524,8 +561,8 @@
         <p>
           출처: <span id="source-text">—</span><br />
           <span id="source-note" hidden
-            >ECB 고시환율을 사용했습니다. 실제 은행 매매기준율과 차이가 있을 수
-            있습니다.</span
+            >달러/원·엔/원은 ECB 기준환율을, 달러/엔은 Yahoo Finance를
+            사용했습니다. 실제 은행 매매기준율과 차이가 있을 수 있습니다.</span
           >
         </p>
         <p>

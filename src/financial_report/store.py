@@ -23,17 +23,23 @@ class StoreError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class Point:
-    """One day of rates. ``jpy_krw_100`` is the price of 100 Japanese yen."""
+    """One day of rates.
+
+    ``jpy_krw_100`` is the price of 100 Japanese yen and ``usd_jpy`` is the
+    price of one US dollar in Japanese yen.
+    """
 
     date: str
     usd_krw: float
     jpy_krw_100: float
+    usd_jpy: float
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "date": self.date,
             "usdKrw": self.usd_krw,
             "jpyKrw100": self.jpy_krw_100,
+            "usdJpy": self.usd_jpy,
         }
 
 
@@ -41,8 +47,17 @@ def now_kst() -> datetime:
     return datetime.now(KST)
 
 
-def make_point(day: Any, usd_krw: Any, jpy_krw_100: Any) -> Point | None:
-    """Validate and normalize one point, returning ``None`` for bad input."""
+def make_point(
+    day: Any,
+    usd_krw: Any,
+    jpy_krw_100: Any,
+    usd_jpy: Any = None,
+) -> Point | None:
+    """Validate and normalize one point, returning ``None`` for bad input.
+
+    Older history files have no ``usdJpy`` field; for those the USD/JPY cross
+    rate is derived from the two KRW quotes.
+    """
 
     try:
         parsed = date.fromisoformat(str(day)[:10])
@@ -56,9 +71,23 @@ def make_point(day: Any, usd_krw: Any, jpy_krw_100: Any) -> Point | None:
         number = float(value)
         if not math.isfinite(number) or number <= 0:
             return None
-        values.append(round(number, 4))
+        values.append(number)
 
-    return Point(parsed.isoformat(), values[0], values[1])
+    if usd_jpy is None:
+        cross = values[0] * 100 / values[1]
+    else:
+        if isinstance(usd_jpy, bool) or not isinstance(usd_jpy, (int, float)):
+            return None
+        cross = float(usd_jpy)
+        if not math.isfinite(cross) or cross <= 0:
+            return None
+
+    return Point(
+        parsed.isoformat(),
+        round(values[0], 4),
+        round(values[1], 4),
+        round(cross, 4),
+    )
 
 
 def load(path: str | Path) -> dict[str, Any] | None:
@@ -94,7 +123,12 @@ def merge(
         for raw in existing.get("points", []):
             if not isinstance(raw, Mapping):
                 continue
-            point = make_point(raw.get("date"), raw.get("usdKrw"), raw.get("jpyKrw100"))
+            point = make_point(
+                raw.get("date"),
+                raw.get("usdKrw"),
+                raw.get("jpyKrw100"),
+                raw.get("usdJpy"),
+            )
             if point is not None:
                 by_date[point.date] = point
 
@@ -172,6 +206,7 @@ def format_summary(payload: Mapping[str, Any]) -> str:
     return (
         f"{payload.get('source', '?')}: {latest.get('date')} "
         f"USD/KRW {latest.get('usdKrw', 0):,.2f} · "
-        f"100 JPY/KRW {latest.get('jpyKrw100', 0):,.2f} "
+        f"100 JPY/KRW {latest.get('jpyKrw100', 0):,.2f} · "
+        f"USD/JPY {latest.get('usdJpy', 0):,.2f} "
         f"({len(points)} points)"
     )

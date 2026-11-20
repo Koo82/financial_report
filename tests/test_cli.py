@@ -10,9 +10,12 @@ from financial_report import cli, store
 
 
 def point(
-    day: str = "2026-11-10", usd: float = 1310.0, jpy: float = 810.0
+    day: str = "2026-11-10",
+    usd: float = 1310.0,
+    jpy: float = 810.0,
+    usdjpy: float = 161.7,
 ) -> store.Point:
-    return store.Point(day, usd, jpy)
+    return store.Point(day, usd, jpy, usdjpy)
 
 
 class BuildSourcesTests(unittest.TestCase):
@@ -121,6 +124,67 @@ class RunFetchTests(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         self.assertFalse(self.path.exists())
+
+
+class BackfillUsdjpyTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = Path(self.temp.name) / "rates.json"
+        self.now = datetime(2026, 11, 11, 11, 30, tzinfo=store.KST)
+        payload = store.merge(
+            None,
+            [
+                point("2026-11-09", 1300.0, 800.0, 150.0),
+                point("2026-11-10", 1310.0, 810.0, 151.0),
+            ],
+            "frankfurter",
+            updated_at=self.now,
+        )
+        store.save(self.path, payload)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_updates_only_usd_jpy(self) -> None:
+        quotes = {"2026-11-09": 150.5, "2026-11-10": 151.5}
+        with patch.object(cli.yahoo, "fetch_usdjpy", return_value=quotes):
+            code = cli.run_backfill_usdjpy(self.path, days=1200, now=self.now)
+
+        self.assertEqual(code, 0)
+        updated = store.load(self.path)
+        assert updated is not None
+        self.assertEqual(updated["source"], "frankfurter")
+        self.assertEqual(
+            [p["usdKrw"] for p in updated["points"]], [1300.0, 1310.0]
+        )
+        self.assertEqual(
+            [p["jpyKrw100"] for p in updated["points"]], [800.0, 810.0]
+        )
+        self.assertEqual(
+            [p["usdJpy"] for p in updated["points"]], [150.5, 151.5]
+        )
+
+    def test_missing_quote_keeps_previous_value(self) -> None:
+        quotes = {"2026-11-10": 152.0}
+        with patch.object(cli.yahoo, "fetch_usdjpy", return_value=quotes):
+            code = cli.run_backfill_usdjpy(self.path, now=self.now)
+
+        self.assertEqual(code, 0)
+        updated = store.load(self.path)
+        assert updated is not None
+        self.assertEqual(
+            [p["usdJpy"] for p in updated["points"]], [150.0, 152.0]
+        )
+
+    def test_failure_does_not_touch_file(self) -> None:
+        before = self.path.read_bytes()
+        with patch.object(
+            cli.yahoo, "fetch_usdjpy", side_effect=RuntimeError("429")
+        ):
+            code = cli.run_backfill_usdjpy(self.path, now=self.now)
+
+        self.assertEqual(code, 1)
+        self.assertEqual(self.path.read_bytes(), before)
 
 
 if __name__ == "__main__":

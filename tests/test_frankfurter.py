@@ -18,6 +18,9 @@ class ParseFrankfurterTests(unittest.TestCase):
         self.assertEqual(points[0].date, "2026-11-10")
         self.assertAlmostEqual(points[0].usd_krw, 1339.01, places=2)
         self.assertAlmostEqual(points[0].jpy_krw_100, 846.52, places=2)
+        self.assertAlmostEqual(
+            points[0].usd_jpy, 0.11813 / 0.00074682, places=4
+        )
 
     def test_range_shape_is_sorted(self) -> None:
         payload = {

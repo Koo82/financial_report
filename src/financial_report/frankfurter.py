@@ -54,8 +54,8 @@ def _get_json(
     raise FrankfurterError(f"Frankfurter request failed: {last_error}")
 
 
-def _cross_rates(row: Mapping[str, Any]) -> tuple[float, float] | None:
-    """Turn ``KRW -> USD/JPY`` rates into ``USD/KRW`` and ``100 JPY/KRW``."""
+def _cross_rates(row: Mapping[str, Any]) -> tuple[float, float, float] | None:
+    """Turn ``KRW -> USD/JPY`` rates into ``USD/KRW``, ``100 JPY/KRW``, ``USD/JPY``."""
 
     try:
         usd_per_krw = float(row["USD"])
@@ -68,7 +68,11 @@ def _cross_rates(row: Mapping[str, Any]) -> tuple[float, float] | None:
     ):
         return None
 
-    return round(1 / usd_per_krw, 4), round(100 / jpy_per_krw, 4)
+    return (
+        round(1 / usd_per_krw, 4),
+        round(100 / jpy_per_krw, 4),
+        round(jpy_per_krw / usd_per_krw, 4),
+    )
 
 
 def parse_payload(payload: Mapping[str, Any]) -> list[Point]:
@@ -95,7 +99,7 @@ def parse_payload(payload: Mapping[str, Any]) -> list[Point]:
         converted = _cross_rates(row)
         if converted is None:
             continue
-        points.append(Point(day, converted[0], converted[1]))
+        points.append(Point(day, converted[0], converted[1], converted[2]))
 
     if not points:
         raise FrankfurterError("Frankfurter returned no usable rates")

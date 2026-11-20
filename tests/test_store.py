@@ -11,11 +11,21 @@ from financial_report import store
 
 class MakePointTests(unittest.TestCase):
     def test_valid_point_is_rounded(self) -> None:
-        point = store.make_point("2026-11-10", 1339.123456, 846.987654)
+        point = store.make_point("2026-11-10", 1339.123456, 846.987654, 158.123456)
         assert point is not None
         self.assertEqual(point.date, "2026-11-10")
         self.assertEqual(point.usd_krw, 1339.1235)
         self.assertEqual(point.jpy_krw_100, 846.9877)
+        self.assertEqual(point.usd_jpy, 158.1235)
+
+    def test_missing_usd_jpy_is_derived_from_cross_rate(self) -> None:
+        point = store.make_point("2026-11-10", 1339.123456, 846.987654)
+        assert point is not None
+        self.assertAlmostEqual(
+            point.usd_jpy,
+            round(1339.123456 * 100 / 846.987654, 4),
+            places=4,
+        )
 
     def test_bad_values_are_rejected(self) -> None:
         cases = [
@@ -30,6 +40,13 @@ class MakePointTests(unittest.TestCase):
             with self.subTest(day=day, usd=usd, jpy=jpy):
                 self.assertIsNone(store.make_point(day, usd, jpy))
 
+    def test_bad_usd_jpy_is_rejected(self) -> None:
+        for value in (0, -1.0, float("nan"), "x", True):
+            with self.subTest(value=value):
+                self.assertIsNone(
+                    store.make_point("2026-11-10", 1300.0, 800.0, value)
+                )
+
 
 class MergeTests(unittest.TestCase):
     def test_new_value_wins_and_dates_are_sorted(self) -> None:
@@ -41,7 +58,7 @@ class MergeTests(unittest.TestCase):
         }
         merged = store.merge(
             existing,
-            [store.Point("2026-11-10", 1320.0, 815.0)],
+            [store.Point("2026-11-10", 1320.0, 815.0, 161.96)],
             "yahoo",
             updated_at=datetime(2026, 11, 11, 11, 30, tzinfo=store.KST),
         )
@@ -51,13 +68,21 @@ class MergeTests(unittest.TestCase):
             [p["date"] for p in merged["points"]], ["2026-11-09", "2026-11-10"]
         )
         self.assertEqual(merged["points"][-1]["usdKrw"], 1320.0)
+        self.assertEqual(merged["points"][-1]["usdJpy"], 161.96)
+        # Legacy entries without usdJpy get the implied cross rate.
+        self.assertAlmostEqual(
+            merged["points"][0]["usdJpy"], 1300.0 * 100 / 800.0, places=4
+        )
 
     def test_old_points_beyond_retention_are_removed(self) -> None:
         old = (datetime(2022, 1, 1).date()).isoformat()
         new = (datetime(2026, 11, 10).date()).isoformat()
         payload = store.merge(
             None,
-            [store.Point(old, 1300.0, 800.0), store.Point(new, 1310.0, 810.0)],
+            [
+                store.Point(old, 1300.0, 800.0, 162.5),
+                store.Point(new, 1310.0, 810.0, 161.7),
+            ],
             "test",
         )
         self.assertEqual([p["date"] for p in payload["points"]], [new])
@@ -68,8 +93,8 @@ class MergeTests(unittest.TestCase):
         payload = store.merge(
             None,
             [
-                store.Point(old, 1300.0, 800.0),
-                store.Point(new.date().isoformat(), 1310.0, 810.0),
+                store.Point(old, 1300.0, 800.0, 162.5),
+                store.Point(new.date().isoformat(), 1310.0, 810.0, 161.7),
             ],
             "test",
         )
@@ -97,7 +122,7 @@ class FileTests(unittest.TestCase):
             path = Path(temp) / "nested" / "rates.json"
             payload = store.merge(
                 None,
-                [store.Point("2026-11-10", 1310.0, 810.0)],
+                [store.Point("2026-11-10", 1310.0, 810.0, 161.73)],
                 "test",
                 updated_at=datetime(2026, 11, 11, 11, 30, tzinfo=store.KST),
             )
@@ -107,6 +132,7 @@ class FileTests(unittest.TestCase):
             assert loaded is not None
             self.assertEqual(loaded, json.loads(path.read_text(encoding="utf-8")))
             self.assertEqual(loaded["points"][0]["usdKrw"], 1310.0)
+            self.assertEqual(loaded["points"][0]["usdJpy"], 161.73)
 
     def test_load_missing_file_returns_none(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

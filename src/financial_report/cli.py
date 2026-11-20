@@ -106,6 +106,96 @@ def run_fetch(
     return 1
 
 
+def run_backfill_usdjpy(
+    data_path: str | Path,
+    days: int = 1200,
+    *,
+    dry_run: bool = False,
+    now: datetime | None = None,
+) -> int:
+    """Fill ``usdJpy`` from Yahoo history without touching the KRW quotes."""
+
+    try:
+        existing = store.load(data_path)
+    except store.StoreError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if not existing or not existing.get("points"):
+        print("error: no existing rate history to backfill", file=sys.stderr)
+        return 1
+
+    try:
+        series = yahoo.fetch_usdjpy(days=days)
+    except Exception as exc:  # noqa: BLE001 - network failures are expected
+        print(f"error: Yahoo USD/JPY fetch failed: {exc}", file=sys.stderr)
+        return 1
+
+    points: list[store.Point] = []
+    matched = 0
+    for raw in existing.get("points", []):
+        if not isinstance(raw, dict):
+            continue
+        base = store.make_point(
+            raw.get("date"),
+            raw.get("usdKrw"),
+            raw.get("jpyKrw100"),
+            raw.get("usdJpy"),
+        )
+        if base is None:
+            continue
+
+        quote = series.get(base.date)
+        if (
+            isinstance(quote, (int, float))
+            and not isinstance(quote, bool)
+            and quote > 0
+        ):
+            points.append(
+                store.Point(
+                    base.date,
+                    base.usd_krw,
+                    base.jpy_krw_100,
+                    round(float(quote), 4),
+                )
+            )
+            matched += 1
+        else:
+            points.append(base)
+
+    if not points:
+        print("error: no usable points to backfill", file=sys.stderr)
+        return 1
+
+    try:
+        payload = store.merge(
+            existing,
+            points,
+            str(existing.get("source") or "yahoo"),
+            updated_at=now,
+        )
+    except store.StoreError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if dry_run:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
+    try:
+        store.save(data_path, payload)
+    except OSError as exc:
+        print(f"error: could not save {data_path}: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"backfilled USD/JPY for {matched} of {len(points)} points from Yahoo Finance"
+    )
+    print(store.format_summary(payload))
+    print(f"saved {data_path}")
+    return 0
+
+
 def _positive_int(value: str) -> int:
     try:
         number = int(value)
@@ -164,6 +254,28 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("auto", "yahoo", "frankfurter"),
         default="auto",
         help="restrict the data source (default: auto with fallback)",
+    )
+
+    usdjpy_parser = subparsers.add_parser(
+        "fetch-usdjpy",
+        help="backfill USD/JPY history from Yahoo Finance",
+    )
+    usdjpy_parser.add_argument(
+        "--data",
+        default="data/rates.json",
+        help="history file to update (default: data/rates.json)",
+    )
+    usdjpy_parser.add_argument(
+        "--days",
+        type=_positive_int,
+        default=1200,
+        metavar="N",
+        help="history window in days (default: 1200, about three years)",
+    )
+    usdjpy_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the merged JSON without writing the file",
     )
 
     market = subparsers.add_parser(
@@ -271,6 +383,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "fetch-usdjpy":
+        return run_backfill_usdjpy(
+            args.data,
+            days=args.days,
+            dry_run=args.dry_run,
+        )
 
     if args.command == "fetch-policy":
         return policy.run_fetch_policy(

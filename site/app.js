@@ -3,17 +3,24 @@
 const FX_SERIES = [
   {
     key: "usdKrw",
-    label: "원/달러",
+    label: "달러/원",
     card: "usd",
     cssVar: "--usd",
     format: "krw",
   },
   {
     key: "jpyKrw100",
-    label: "원/엔",
+    label: "엔/원",
     card: "jpy",
     cssVar: "--jpy",
     format: "krw",
+  },
+  {
+    key: "usdJpy",
+    label: "달러/엔",
+    card: "usdjpy",
+    cssVar: "--usdjpy",
+    format: "jpy",
   },
 ];
 
@@ -103,6 +110,13 @@ const CHARTS = [
     series: [FX_SERIES[1]],
     area: true,
     legend: "legend-jpy",
+  },
+  {
+    id: "usdjpy",
+    group: "fx",
+    series: [FX_SERIES[2]],
+    area: true,
+    legend: "legend-usdjpy",
   },
   {
     id: "yields",
@@ -246,6 +260,7 @@ function formatMonth(iso) {
 function formatValue(series, value) {
   if (series.format === "percent") return `${numberFmt.format(value)}%`;
   if (series.format === "usd") return `$${numberFmt.format(value)}`;
+  if (series.format === "jpy") return `${numberFmt.format(value)}엔`;
   return `${numberFmt.format(value)}원`;
 }
 
@@ -280,6 +295,33 @@ function parseGroup(payload, keys) {
         /^\d{4}-\d{2}-\d{2}$/.test(point.date) &&
         keys.every(
           (key) => Number.isFinite(point[key]) && point[key] > 0,
+        ),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function parseFx(payload) {
+  return (Array.isArray(payload?.points) ? payload.points : [])
+    .map((raw) => {
+      const point = {
+        date: String(raw?.date ?? ""),
+        usdKrw: Number(raw?.usdKrw),
+        jpyKrw100: Number(raw?.jpyKrw100),
+      };
+      const direct = Number(raw?.usdJpy);
+      point.usdJpy =
+        Number.isFinite(direct) && direct > 0
+          ? direct
+          : point.usdKrw > 0 && point.jpyKrw100 > 0
+            ? (point.usdKrw * 100) / point.jpyKrw100
+            : Number.NaN;
+      return point;
+    })
+    .filter(
+      (point) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(point.date) &&
+        [point.usdKrw, point.jpyKrw100, point.usdJpy].every(
+          (value) => Number.isFinite(value) && value > 0,
         ),
     )
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -345,7 +387,12 @@ async function load() {
   $("stamp").textContent = "불러오는 중…";
 
   const specs = [
-    { name: "fx", file: "rates.json", keys: FX_SERIES.map((s) => s.key) },
+    {
+      name: "fx",
+      file: "rates.json",
+      keys: FX_SERIES.map((s) => s.key),
+      parse: parseFx,
+    },
     {
       name: "policy",
       file: "policy.json",
@@ -1073,6 +1120,9 @@ function formatExtent(item, min, max) {
   }
   if (item.format === "usd") {
     return `$${numberFmt.format(min)} – $${numberFmt.format(max)}`;
+  }
+  if (item.format === "jpy") {
+    return `${numberFmt.format(min)} – ${numberFmt.format(max)}엔`;
   }
   return `${numberFmt.format(min)} – ${numberFmt.format(max)}원`;
 }

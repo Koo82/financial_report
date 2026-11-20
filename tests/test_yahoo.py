@@ -56,6 +56,7 @@ class AlignSeriesTests(unittest.TestCase):
         points = yahoo.align_series(
             {"2026-11-09": 1300.0, "2026-11-10": 1310.0},
             {"2026-11-09": 8.0, "2026-11-11": 8.2},
+            {"2026-11-09": 150.0, "2026-11-10": 151.5},
         )
         self.assertEqual(
             [p.date for p in points], ["2026-11-09", "2026-11-10", "2026-11-11"]
@@ -64,9 +65,15 @@ class AlignSeriesTests(unittest.TestCase):
         self.assertEqual(points[1].jpy_krw_100, 800.0)  # carried forward
         self.assertEqual(points[2].usd_krw, 1310.0)  # carried forward
         self.assertEqual(points[2].jpy_krw_100, 820.0)
+        self.assertEqual(points[0].usd_jpy, 150.0)
+        self.assertEqual(points[1].usd_jpy, 151.5)
+        self.assertEqual(points[2].usd_jpy, 151.5)  # carried forward
 
     def test_disjoint_series(self) -> None:
-        self.assertEqual(yahoo.align_series({}, {"2026-11-10": 8.0}), [])
+        self.assertEqual(yahoo.align_series({}, {"2026-11-10": 8.0}, {}), [])
+        self.assertEqual(
+            yahoo.align_series({}, {}, {"2026-11-10": 150.0}), []
+        )
 
 
 if __name__ == "__main__":

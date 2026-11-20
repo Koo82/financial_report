@@ -17,6 +17,7 @@
 
   --usd: #3b82f6;
   --jpy: #f59e0b;
+  --usdjpy: #059669;
 
   --kr: #dc2626;
   --jp: #7c3aed;
@@ -56,6 +57,7 @@
 
     --usd: #60a5fa;
     --jpy: #fbbf24;
+    --usdjpy: #6ee7b7;
 
     --kr: #f87171;
     --jp: #a78bfa;
@@ -267,6 +269,10 @@ h1 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.cards--fx {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .card {
   position: relative;
   overflow: hidden;
@@ -292,6 +298,10 @@ h1 {
 
 .card--jpy {
   --accent: var(--jpy);
+}
+
+.card--usdjpy {
+  --accent: var(--usdjpy);
 }
 
 .card--kr {
@@ -561,6 +571,10 @@ h1 {
 
 .dot--jpy {
   background: var(--jpy);
+}
+
+.dot--usdjpy {
+  background: var(--usdjpy);
 }
 
 .dot--y5 {
