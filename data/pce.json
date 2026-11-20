@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "pce",
-  "updatedAt": "2026-11-19T13:42:38+09:00",
+  "updatedAt": "2026-11-21T07:09:53+09:00",
   "source": "fred",
   "series": [
     "core_pce_index",
