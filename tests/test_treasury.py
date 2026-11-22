@@ -26,6 +26,7 @@ class ParseCsvTests(unittest.TestCase):
             ["2026-11-06", "2026-11-09", "2026-11-10"],
         )
         self.assertEqual(points[-1].values, {
+            "us2y": 4.73,
             "us5y": 4.81,
             "us10y": 4.98,
             "us30y": 5.35,
@@ -34,6 +35,7 @@ class ParseCsvTests(unittest.TestCase):
     def test_handles_older_header_without_extra_column(self) -> None:
         points = treasury.parse_csv(OLDER_CSV)
         self.assertEqual(points[0].values, {
+            "us2y": 4.23,
             "us5y": 3.84,
             "us10y": 3.88,
             "us30y": 4.03,
@@ -63,8 +65,8 @@ class FetchTests(unittest.TestCase):
             calls.append(year)
             month, day = (11, 10) if year == 2026 else (12, 29)
             return (
-                'Date,"5 Yr","10 Yr","30 Yr"\n'
-                f"{month:02d}/{day:02d}/{year},4.1,4.2,4.3\n"
+                'Date,"2 Yr","5 Yr","10 Yr","30 Yr"\n'
+                f"{month:02d}/{day:02d}/{year},4.0,4.1,4.2,4.3\n"
             )
 
         with patch.object(treasury, "get_text", side_effect=fake):
@@ -83,7 +85,7 @@ class FetchTests(unittest.TestCase):
 
         def fake(url: str, **_: object) -> str:
             calls.append(int(re.search(r"\.csv/(\d{4})/", url).group(1)))
-            return 'Date,"5 Yr","10 Yr","30 Yr"\n11/10/2026,4.1,4.2,4.3\n'
+            return 'Date,"2 Yr","5 Yr","10 Yr","30 Yr"\n11/10/2026,4.0,4.1,4.2,4.3\n'
 
         with patch.object(treasury, "get_text", side_effect=fake):
             points = treasury.fetch_points(

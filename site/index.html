@@ -355,7 +355,20 @@
           <p class="section-sub" id="yields-asof">—</p>
         </div>
 
-        <div class="cards cards--three">
+        <div class="cards cards--yields">
+          <article class="card card--compact card--y2">
+            <div class="card-head">
+              <h3>2년물</h3>
+              <span class="code">US 2Y</span>
+            </div>
+            <p class="rate">
+              <span id="y2-rate" class="placeholder">—</span
+              ><span class="unit">%</span>
+            </p>
+            <p class="delta flat" id="y2-delta">—</p>
+            <p class="card-meta" id="y2-meta">—</p>
+          </article>
+
           <article class="card card--compact card--y5">
             <div class="card-head">
               <h3>5년물</h3>
@@ -394,6 +407,19 @@
             <p class="delta flat" id="y30-delta">—</p>
             <p class="card-meta" id="y30-meta">—</p>
           </article>
+
+          <article class="card card--compact card--spread">
+            <div class="card-head">
+              <h3>10년–2년</h3>
+              <span class="code">10Y–2Y</span>
+            </div>
+            <p class="rate">
+              <span id="spread-rate" class="placeholder">—</span
+              ><span class="unit">%p</span>
+            </p>
+            <p class="delta flat" id="spread-delta">—</p>
+            <p class="card-meta" id="spread-meta">—</p>
+          </article>
         </div>
 
         <div class="panel chart-panel" aria-label="미국 국채 금리 추이">
@@ -405,6 +431,10 @@
               </p>
             </div>
             <div class="chart-legend">
+              <span class="legend-item"
+                ><i class="dot dot--y2" aria-hidden="true"></i>2년
+                <b class="legend-range" id="rng-yields-us2y">—</b></span
+              >
               <span class="legend-item"
                 ><i class="dot dot--y5" aria-hidden="true"></i>5년
                 <b class="legend-range" id="rng-yields-us5y">—</b></span
@@ -423,11 +453,36 @@
                 id="chart-yields"
                 class="chart-svg"
                 role="img"
-                aria-label="미국 국채 5년, 10년, 30년 금리 추이 선 그래프"
+                aria-label="미국 국채 2년, 5년, 10년, 30년 금리 추이 선 그래프"
                 viewBox="0 0 720 180"
               ></svg>
               <div class="chart-tooltip" id="tooltip-yields" hidden></div>
               <p class="chart-empty" id="empty-yields" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--spread"></span>
+                <span>10년–2년 스프레드</span>
+                <span class="chart-unit">%p</span>
+                <strong id="legend-spread">—</strong>
+              </p>
+              <p class="chart-range" id="range-spread">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-spread"
+                class="chart-svg"
+                role="img"
+                aria-label="미국 국채 10년물과 2년물 금리차 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-spread" hidden></div>
+              <p class="chart-empty" id="empty-spread" hidden>
                 표시할 데이터가 아직 충분하지 않아요.
               </p>
             </div>
@@ -566,11 +621,12 @@
           >
         </p>
         <p>
-          국채 금리는 미국 재무부 고시 par yield, 선물은 최근월물 연속 계약의
-          종가입니다. 기준금리는 한국은행·일본은행·미국 연준의 정책금리이며,
-          미국은 목표범위로 표시합니다. 근원 PCE는 미국 경제분석국(BEA)이
-          발표하는 월별 개인소비지출 물가지수에서 계산한 전년동월비·전월비입니다.
-          표시된 값은 참고용이며 실제 거래 가격과 다를 수 있습니다.
+          국채 금리는 미국 재무부 고시 par yield(2·5·10·30년), 선물은 최근월물
+          연속 계약의 종가입니다. 10년–2년 스프레드는 두 금리의 차이(%p)입니다.
+          기준금리는 한국은행·일본은행·미국 연준의 정책금리이며, 미국은
+          목표범위로 표시합니다. 근원 PCE는 미국 경제분석국(BEA)이 발표하는 월별
+          개인소비지출 물가지수에서 계산한 전년동월비·전월비입니다. 표시된 값은
+          참고용이며 실제 거래 가격과 다를 수 있습니다.
         </p>
       </footer>
     </main>

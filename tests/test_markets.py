@@ -13,7 +13,7 @@ def yields_points() -> list[timeseries.SeriesPoint]:
     return [
         timeseries.SeriesPoint(
             "2026-11-10",
-            {"us5y": 4.81, "us10y": 4.98, "us30y": 5.35},
+            {"us2y": 4.73, "us5y": 4.81, "us10y": 4.98, "us30y": 5.35},
         )
     ]
 
@@ -53,6 +53,7 @@ class RunFetchMarketsTests(unittest.TestCase):
         assert yields and futures
         self.assertEqual(yields["source"], "fake-yields")
         self.assertEqual(futures["source"], "fake-futures")
+        self.assertEqual(yields["points"][0]["us2y"], 4.73)
         self.assertEqual(yields["points"][0]["us10y"], 4.98)
 
     def test_falls_back_to_the_second_source(self) -> None:
@@ -167,6 +168,12 @@ class RunFetchMarketsTests(unittest.TestCase):
 
 
 class BuildSourcesTests(unittest.TestCase):
+    def test_yields_series_include_the_two_year(self) -> None:
+        self.assertEqual(
+            markets.GROUPS["yields"].series,
+            ("us2y", "us5y", "us10y", "us30y"),
+        )
+
     def test_yields_use_treasury(self) -> None:
         self.assertEqual(
             [name for name, _ in markets.build_sources("yields", 1200)],

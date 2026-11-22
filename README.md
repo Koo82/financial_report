@@ -20,13 +20,14 @@
 | 환율 | 달러/원(USD/KRW), 엔/원(100엔, JPY/KRW), 달러/엔(USD/JPY) | Yahoo Finance → ECB 기준환율 |
 | 기준금리 | 한국은행 기준금리, 일본은행 정책금리, 미국 연준 목표범위 | 한국은행 ECOS, BIS, FRED |
 | 미국 물가 | 근원 PCE 전년동월비, 전월비 | FRED · BEA |
-| 미국 국채 | 5년물, 10년물, 30년물 par yield(%) | 미국 재무부 |
+| 미국 국채 | 2년물, 5년물, 10년물, 30년물 par yield(%), 10년–2년 스프레드 | 미국 재무부 |
 | 원자재 선물 | 금(GC), WTI 원유(CL), 브렌트 원유(OIL) | Sina Finance → Eastmoney |
 
 - 기준금리는 각 중앙은행의 정책금리이며, 미국은 **목표범위**(예: 3.75–4.00%)로
   표시합니다. 일본은 BOJ 자체 API가 정책목표가 아닌 실제 콜금리만 제공하므로
   BIS 중앙은행 정책금리 데이터를 사용합니다.
-- 국채 금리는 미국 재무부가 고시하는 **par yield**입니다.
+- 국채 금리는 미국 재무부가 고시하는 **par yield**입니다. 10년–2년 스프레드는
+  두 금리의 차이를 %p로 계산해 화면에서 표시합니다.
 - 근원 PCE는 미국 경제분석국(BEA)의 월별 PCE 물가지수(식료품·에너지 제외)에서
   전년동월비·전월비를 계산합니다.
 - 선물 가격은 최근월물 연속 계약의 **종가**이며, 진행 중인 당일 세션은
@@ -40,7 +41,7 @@
 data/rates.json                    # 누적된 일별 환율
 data/policy.json                   # 한국/일본/미국 기준금리 변경 이력
 data/pce.json                      # 월별 근원 PCE 지수와 전년동월비/전월비
-data/yields.json                   # 누적된 미국 국채 5/10/30년 금리
+data/yields.json                   # 누적된 미국 국채 2/5/10/30년 금리
 data/futures.json                  # 누적된 금/WTI/브렌트 선물 종가
 site/                              # 정적 대시보드 (index.html, app.js, styles.css)
 src/financial_report/              # 수집/병합 CLI
@@ -101,6 +102,7 @@ uv run financial-report fetch --force            # 최신 데이터여도 강제
 
 ```bash
 uv run financial-report fetch-markets --group yields       # 국채만
+uv run financial-report fetch-markets --group yields --days 1200 --force  # 2년물 포함 3년치 백필
 uv run financial-report fetch-markets --group futures      # 선물만
 uv run financial-report fetch-markets --days 1200 --force  # 3년치 백필
 uv run financial-report fetch-markets --dry-run            # 결과만 확인
@@ -179,9 +181,11 @@ KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크�
   월별·계절조정)를 사용합니다. 지수에서 전년동월비·전월비를 계산하며, BEA 발표
   일정에 따라 최신 관측치는 전월 이전일 수 있습니다. 화면에는 관측 월을
   표시합니다.
-- **미국 국채**: 미국 재무부 일별 금리 CSV를 사용합니다. 미국 공휴일에는 새
-  고시가 없어 직전 값이 유지됩니다. 2026-11-11은 재향군인의 날이라 최신 값이
-  11-10입니다.
+- **미국 국채**: 미국 재무부 일별 금리 CSV의 2·5·10·30년 par yield를
+  사용합니다. 미국 공휴일에는 새 고시가 없어 직전 값이 유지됩니다. 2026-11-11은
+  재향군인의 날이라 최신 값이 11-10입니다. 10년–2년 스프레드는 두 금리의 차이
+  (10년물 − 2년물, %p)이며, 음수면 장단기 금리가 역전된 상태입니다. 스프레드는
+  별도 파일에 저장하지 않고 화면에서 계산합니다.
 - **원자재 선물**: Sina Finance의 최근월물 연속 계약 종가를 우선 사용하고,
   실패하면 Eastmoney의 연속 계약으로 전환합니다. 두 출처의 값은 소수점 단위까지
   일치하는 것을 확인했습니다. 당일 진행 중인 세션은 제외하므로 최신 값은 직전

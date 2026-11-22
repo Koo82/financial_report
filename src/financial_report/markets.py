@@ -30,7 +30,7 @@ GROUPS = {
         name="yields",
         filename="yields.json",
         kind="yields",
-        series=("us5y", "us10y", "us30y"),
+        series=("us2y", "us5y", "us10y", "us30y"),
     ),
     "futures": Group(
         name="futures",

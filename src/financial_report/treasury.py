@@ -17,7 +17,12 @@ BASE = (
     "https://home.treasury.gov/resource-center/data-chart-center/"
     "interest-rates/daily-treasury-rates.csv/{year}/all"
 )
-COLUMNS = {"us5y": "5 Yr", "us10y": "10 Yr", "us30y": "30 Yr"}
+COLUMNS = {
+    "us2y": "2 Yr",
+    "us5y": "5 Yr",
+    "us10y": "10 Yr",
+    "us30y": "30 Yr",
+}
 SERIES = tuple(COLUMNS)
 
 
@@ -102,7 +107,7 @@ def fetch_points(
     attempts: int = 3,
     sleep: Callable[[float], None] | None = None,
 ) -> list[SeriesPoint]:
-    """Fetch the last ``days`` of 5/10/30-year yields."""
+    """Fetch the last ``days`` of 2/5/10/30-year yields."""
 
     current = today or now_kst().date()
     start = current - timedelta(days=days)

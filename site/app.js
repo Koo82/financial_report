@@ -25,6 +25,7 @@ const FX_SERIES = [
 ];
 
 const YIELD_SERIES = [
+  { key: "us2y", label: "2년", card: "y2", cssVar: "--y2", format: "percent" },
   { key: "us5y", label: "5년", card: "y5", cssVar: "--y5", format: "percent" },
   {
     key: "us10y",
@@ -41,6 +42,14 @@ const YIELD_SERIES = [
     format: "percent",
   },
 ];
+
+const SPREAD_SERIES = {
+  key: "spread10y2y",
+  label: "10년–2년",
+  card: "spread",
+  cssVar: "--spread",
+  format: "spread",
+};
 
 const FUTURES_SERIES = [
   { key: "gold", label: "금", card: "gold", cssVar: "--gold", format: "usd" },
@@ -124,6 +133,14 @@ const CHARTS = [
     series: YIELD_SERIES,
     area: false,
     legend: null,
+  },
+  {
+    id: "spread",
+    group: "yields",
+    series: [SPREAD_SERIES],
+    area: true,
+    legend: "legend-spread",
+    zero: true,
   },
   {
     id: "pce",
@@ -258,6 +275,7 @@ function formatMonth(iso) {
 }
 
 function formatValue(series, value) {
+  if (series.format === "spread") return `${signedFmt.format(value)}%p`;
   if (series.format === "percent") return `${numberFmt.format(value)}%`;
   if (series.format === "usd") return `$${numberFmt.format(value)}`;
   if (series.format === "jpy") return `${numberFmt.format(value)}엔`;
@@ -273,6 +291,24 @@ function latestPair(group) {
     latest: group.points[group.points.length - 1] ?? null,
     previous: group.points[group.points.length - 2] ?? null,
   };
+}
+
+function latestPairFor(group, key) {
+  const points = group.points;
+  let latest = null;
+  let previous = null;
+
+  for (let index = points.length - 1; index >= 0; index -= 1) {
+    if (!Number.isFinite(points[index][key])) continue;
+    if (!latest) {
+      latest = points[index];
+    } else {
+      previous = points[index];
+      break;
+    }
+  }
+
+  return { latest, previous };
 }
 
 function rangePoints(group, days = state.rangeDays) {
@@ -375,6 +411,30 @@ function parsePce(payload) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function parseYields(payload) {
+  const keys = YIELD_SERIES.map((series) => series.key);
+
+  return (Array.isArray(payload?.points) ? payload.points : [])
+    .map((raw) => {
+      const point = { date: String(raw?.date ?? "") };
+      for (const key of keys) {
+        const value = Number(raw?.[key]);
+        point[key] = Number.isFinite(value) && value > 0 ? value : Number.NaN;
+      }
+      point.spread10y2y =
+        Number.isFinite(point.us10y) && Number.isFinite(point.us2y)
+          ? Math.round((point.us10y - point.us2y) * 10000) / 10000
+          : Number.NaN;
+      return point;
+    })
+    .filter(
+      (point) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(point.date) &&
+        keys.some((key) => Number.isFinite(point[key])),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 async function fetchPayload(file) {
   const response = await fetch(`data/${file}?t=${Date.now()}`, {
     cache: "no-store",
@@ -409,6 +469,7 @@ async function load() {
       name: "yields",
       file: "yields.json",
       keys: YIELD_SERIES.map((s) => s.key),
+      parse: parseYields,
     },
     {
       name: "futures",
@@ -616,9 +677,9 @@ function renderFx() {
 
 function renderYields() {
   const group = state.groups.yields;
-  const { latest, previous } = latestPair(group);
 
-  for (const series of YIELD_SERIES) {
+  for (const series of [...YIELD_SERIES, SPREAD_SERIES]) {
+    const { latest, previous } = latestPairFor(group, series.key);
     if (!latest) {
       setCardEmpty(series.card);
       continue;
@@ -626,7 +687,10 @@ function renderYields() {
 
     const rate = $(`${series.card}-rate`);
     rate.classList.remove("placeholder");
-    rate.textContent = numberFmt.format(latest[series.key]);
+    rate.textContent =
+      series.format === "spread"
+        ? signedFmt.format(latest[series.key])
+        : numberFmt.format(latest[series.key]);
     renderDelta(series.card, latest, previous, series, "percent", 0.005);
   }
 
@@ -952,6 +1016,11 @@ function renderChart(chart, points) {
     rawMax = Math.max(rawMax, chart.target);
   }
 
+  if (chart.zero) {
+    rawMin = Math.min(rawMin, 0);
+    rawMax = Math.max(rawMax, 0);
+  }
+
   const spread = rawMax - rawMin;
   const padding = spread > 0 ? spread * 0.16 : Math.max(rawMax * 0.005, 0.01);
   const min = rawMin - padding;
@@ -1036,6 +1105,18 @@ function renderChart(chart, points) {
     }%</text>`;
   }
 
+  if (chart.zero) {
+    const zeroY = yAt(0);
+    markup += `<line x1="${PAD.left}" y1="${zeroY.toFixed(
+      1,
+    )}" x2="${W - PAD.right}" y2="${zeroY.toFixed(
+      1,
+    )}" stroke="${faintColor}" stroke-width="1" stroke-dasharray="4 4" opacity="0.85" />`;
+    markup += `<text x="${W - PAD.right}" y="${(zeroY - 4).toFixed(
+      1,
+    )}" text-anchor="end" fill="${faintColor}" font-size="10">0</text>`;
+  }
+
   for (const path of paths) {
     const color = cssVar(path.item.cssVar);
     const last = path.segments[path.segments.length - 1];
@@ -1063,8 +1144,12 @@ function renderChart(chart, points) {
   svg.innerHTML = markup;
 
   if (legend) {
-    const latest = points[points.length - 1];
-    legend.textContent = formatValue(series[0], latest[series[0].key]);
+    const latest = [...points]
+      .reverse()
+      .find((point) => Number.isFinite(point[series[0].key]));
+    legend.textContent = latest
+      ? formatValue(series[0], latest[series[0].key])
+      : "—";
   }
 
   for (const item of chart.series) {
@@ -1115,6 +1200,9 @@ function extentOf(points, key) {
 }
 
 function formatExtent(item, min, max) {
+  if (item.format === "spread") {
+    return `${signedFmt.format(min)} – ${signedFmt.format(max)}%p`;
+  }
   if (item.format === "percent") {
     return `${numberFmt.format(min)} – ${numberFmt.format(max)}%`;
   }
