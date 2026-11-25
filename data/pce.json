@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "pce",
-  "updatedAt": "2026-11-25T08:49:05+09:00",
+  "updatedAt": "2026-11-26T08:29:50+09:00",
   "source": "fred",
   "series": [
     "core_pce_index",
@@ -707,15 +707,21 @@
     },
     {
       "date": "2026-08-01",
-      "core_pce_index": 130.489,
-      "core_pce_mom": 0.262,
-      "core_pce_yoy": 3.0344
+      "core_pce_index": 130.505,
+      "core_pce_mom": 0.2743,
+      "core_pce_yoy": 3.0471
     },
     {
       "date": "2026-09-01",
-      "core_pce_index": 130.902,
-      "core_pce_mom": 0.3165,
-      "core_pce_yoy": 3.1212
+      "core_pce_index": 130.929,
+      "core_pce_mom": 0.3249,
+      "core_pce_yoy": 3.1424
+    },
+    {
+      "date": "2026-10-01",
+      "core_pce_index": 131.312,
+      "core_pce_mom": 0.2925,
+      "core_pce_yoy": 3.2611
     }
   ]
 }
