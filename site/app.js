@@ -24,6 +24,16 @@ const FX_SERIES = [
   },
 ];
 
+const DOLLAR_SERIES = [
+  {
+    key: "dxy",
+    label: "달러 인덱스",
+    card: "dxy",
+    cssVar: "--dxy",
+    format: "index",
+  },
+];
+
 const YIELD_SERIES = [
   { key: "us2y", label: "2년", card: "y2", cssVar: "--y2", format: "percent" },
   { key: "us5y", label: "5년", card: "y5", cssVar: "--y5", format: "percent" },
@@ -126,6 +136,13 @@ const CHARTS = [
     series: [FX_SERIES[2]],
     area: true,
     legend: "legend-usdjpy",
+  },
+  {
+    id: "dxy",
+    group: "dollar",
+    series: [DOLLAR_SERIES[0]],
+    area: true,
+    legend: "legend-dxy",
   },
   {
     id: "yields",
@@ -236,6 +253,7 @@ const state = {
   pceRangeDays: 1095,
   groups: {
     fx: { payload: null, points: [], error: null },
+    dollar: { payload: null, points: [], error: null },
     policy: { payload: null, points: [], error: null },
     pce: { payload: null, points: [], error: null },
     yields: { payload: null, points: [], error: null },
@@ -279,6 +297,7 @@ function formatValue(series, value) {
   if (series.format === "percent") return `${numberFmt.format(value)}%`;
   if (series.format === "usd") return `$${numberFmt.format(value)}`;
   if (series.format === "jpy") return `${numberFmt.format(value)}엔`;
+  if (series.format === "index") return numberFmt.format(value);
   return `${numberFmt.format(value)}원`;
 }
 
@@ -454,6 +473,11 @@ async function load() {
       parse: parseFx,
     },
     {
+      name: "dollar",
+      file: "dollar.json",
+      keys: DOLLAR_SERIES.map((series) => series.key),
+    },
+    {
       name: "policy",
       file: "policy.json",
       keys: ["kr", "jp", "us_low", "us_high"],
@@ -518,6 +542,7 @@ async function load() {
   if (failed.length > 0) {
     const labels = {
       fx: "환율",
+      dollar: "달러 인덱스",
       policy: "기준금리",
       pce: "미국 물가",
       yields: "미국 국채",
@@ -561,6 +586,7 @@ function asOf(group) {
 function renderAll() {
   renderStamp();
   renderFx();
+  renderDollar();
   renderPolicy();
   renderPce();
   renderYields();
@@ -568,6 +594,13 @@ function renderAll() {
   renderCharts();
 
   const fxLabel = sourceLabel(state.groups.fx);
+  const dollarLabel = state.groups.dollar.points.length
+    ? sourceLabel(state.groups.dollar)
+    : "Yahoo Finance";
+  const fxSources =
+    dollarLabel === fxLabel
+      ? `${fxLabel}(환율·달러 인덱스)`
+      : `${fxLabel} · 달러 인덱스 ${dollarLabel}`;
   const futuresLabel = state.groups.futures.points.length
     ? sourceLabel(state.groups.futures)
     : "Sina Finance";
@@ -577,7 +610,7 @@ function renderAll() {
   const pceLabel = state.groups.pce.points.length
     ? sourceLabel(state.groups.pce)
     : "FRED · BEA";
-  $("source-text").textContent = `${fxLabel} · ${policyLabel} · ${pceLabel} · 미국 재무부 · ${futuresLabel}`;
+  $("source-text").textContent = `${fxSources} · ${policyLabel} · ${pceLabel} · 미국 재무부 · ${futuresLabel}`;
   $("source-note").hidden = state.groups.fx.payload?.source !== "frankfurter";
 }
 
@@ -634,7 +667,7 @@ function renderDelta(
   const arrow = trend === "up" ? "▲" : trend === "down" ? "▼" : "–";
   delta.className = `delta ${trend}`;
 
-  if (mode === "krw") {
+  if (mode === "krw" || mode === "index") {
     delta.append(`${arrow} ${signedFmt.format(change)} `);
     const percent = (change / previous[series.key]) * 100;
     const pct = document.createElement("span");
@@ -673,6 +706,24 @@ function renderFx() {
 
   $("fx-asof").textContent = asOf(group);
   setStale("fx", group);
+}
+
+function renderDollar() {
+  const group = state.groups.dollar;
+  const { latest, previous } = latestPair(group);
+  const series = DOLLAR_SERIES[0];
+
+  if (!latest) {
+    setCardEmpty(series.card);
+  } else {
+    const rate = $(`${series.card}-rate`);
+    rate.classList.remove("placeholder");
+    rate.textContent = numberFmt.format(latest[series.key]);
+    renderDelta(series.card, latest, previous, series, "index", 0.005);
+  }
+
+  $("dollar-asof").textContent = asOf(group);
+  setStale("dollar", group);
 }
 
 function renderYields() {
@@ -928,6 +979,7 @@ function renderCharts() {
   }
 
   renderAxis("fx", state.groups.fx, state.rangeDays);
+  renderAxis("dollar", state.groups.dollar, state.rangeDays);
   renderAxis("pce", state.groups.pce, state.pceRangeDays);
   renderAxis("yields", state.groups.yields, state.rangeDays);
   renderAxis("futures", state.groups.futures, state.rangeDays);
@@ -1211,6 +1263,9 @@ function formatExtent(item, min, max) {
   }
   if (item.format === "jpy") {
     return `${numberFmt.format(min)} – ${numberFmt.format(max)}엔`;
+  }
+  if (item.format === "index") {
+    return `${numberFmt.format(min)} – ${numberFmt.format(max)}`;
   }
   return `${numberFmt.format(min)} – ${numberFmt.format(max)}원`;
 }

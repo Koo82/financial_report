@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from financial_report import markets, store, timeseries
 
@@ -25,6 +25,10 @@ def futures_points() -> list[timeseries.SeriesPoint]:
             {"gold": 3994.2, "wti": 86.42, "brent": 92.58},
         )
     ]
+
+
+def dollar_points() -> list[timeseries.SeriesPoint]:
+    return [timeseries.SeriesPoint("2026-11-24", {"dxy": 103.81})]
 
 
 class RunFetchMarketsTests(unittest.TestCase):
@@ -55,6 +59,22 @@ class RunFetchMarketsTests(unittest.TestCase):
         self.assertEqual(futures["source"], "fake-futures")
         self.assertEqual(yields["points"][0]["us2y"], 4.73)
         self.assertEqual(yields["points"][0]["us10y"], 4.98)
+
+    def test_writes_dollar_group(self) -> None:
+        code = markets.run_fetch_markets(
+            self.data_dir,
+            ("dollar",),
+            now=self.now,
+            sources_by_group={"dollar": [("yahoo", dollar_points)]},
+        )
+
+        self.assertEqual(code, 0)
+        payload = timeseries.load(self.data_dir / "dollar.json")
+        assert payload
+        self.assertEqual(payload["source"], "yahoo")
+        self.assertEqual(payload["kind"], "dollar")
+        self.assertEqual(payload["series"], ["dxy"])
+        self.assertEqual(payload["points"][0]["dxy"], 103.81)
 
     def test_falls_back_to_the_second_source(self) -> None:
         def broken() -> list[timeseries.SeriesPoint]:
@@ -184,6 +204,29 @@ class BuildSourcesTests(unittest.TestCase):
         self.assertEqual(
             [name for name, _ in markets.build_sources("futures", 1200)],
             ["sina", "eastmoney"],
+        )
+
+    def test_dollar_series_is_dxy(self) -> None:
+        self.assertEqual(markets.GROUPS["dollar"].series, ("dxy",))
+
+    def test_dollar_uses_yahoo(self) -> None:
+        self.assertEqual(
+            [name for name, _ in markets.build_sources("dollar", 1200)],
+            ["yahoo"],
+        )
+
+    def test_dollar_source_converts_quotes(self) -> None:
+        quotes = {"2026-11-24": 103.81}
+        with patch.object(
+            markets.yahoo, "fetch_dxy", return_value=quotes
+        ) as fetch:
+            source = markets.build_sources("dollar", 14)[0][1]
+            points = source()
+
+        fetch.assert_called_once_with(days=14)
+        self.assertEqual(
+            points,
+            [timeseries.SeriesPoint("2026-11-24", {"dxy": 103.81})],
         )
 
 

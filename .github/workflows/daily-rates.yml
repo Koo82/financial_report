@@ -67,7 +67,7 @@ jobs:
           fi
           uv run financial-report fetch "${args[@]}"
 
-      - name: Fetch yields and futures
+      - name: Fetch yields, futures, and dollar index
         continue-on-error: true
         env:
           FORCE: ${{ inputs.force }}

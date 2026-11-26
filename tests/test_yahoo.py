@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
+from unittest.mock import patch
 
 from financial_report import yahoo
 from financial_report.store import KST
@@ -74,6 +75,19 @@ class AlignSeriesTests(unittest.TestCase):
         self.assertEqual(
             yahoo.align_series({}, {}, {"2026-11-10": 150.0}), []
         )
+
+
+class FetchDxyTests(unittest.TestCase):
+    def test_uses_ice_dollar_index_symbol(self) -> None:
+        quotes = {"2026-11-24": 103.81}
+        with patch.object(
+            yahoo, "_fetch_series", return_value=quotes
+        ) as fetch:
+            result = yahoo.fetch_dxy(days=30)
+
+        self.assertEqual(fetch.call_args.args[0], yahoo.DXY_SYMBOL)
+        self.assertEqual(fetch.call_args.args[1], 30)
+        self.assertEqual(result, quotes)
 
 
 if __name__ == "__main__":

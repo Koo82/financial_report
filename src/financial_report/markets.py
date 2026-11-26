@@ -1,4 +1,4 @@
-"""Fetch and store Treasury yields and commodity futures."""
+"""Fetch and store Treasury yields, commodity futures, and the dollar index."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from . import eastmoney, sina, store, timeseries, treasury
+from . import eastmoney, sina, store, timeseries, treasury, yahoo
 
 BOOTSTRAP_DAYS = 1200
 INCREMENTAL_DAYS = 14
@@ -38,7 +38,21 @@ GROUPS = {
         kind="futures",
         series=("gold", "wti", "brent"),
     ),
+    "dollar": Group(
+        name="dollar",
+        filename="dollar.json",
+        kind="dollar",
+        series=("dxy",),
+    ),
 }
+
+
+def _dxy_points(days: int) -> list[timeseries.SeriesPoint]:
+    quotes = yahoo.fetch_dxy(days=days)
+    return [
+        timeseries.SeriesPoint(day, {"dxy": value})
+        for day, value in sorted(quotes.items())
+    ]
 
 
 def build_sources(name: str, days: int) -> list[Source]:
@@ -49,12 +63,14 @@ def build_sources(name: str, days: int) -> list[Source]:
             ("sina", lambda: sina.fetch_points(days=days)),
             ("eastmoney", lambda: eastmoney.fetch_points(days=days)),
         ]
+    if name == "dollar":
+        return [("yahoo", lambda: _dxy_points(days))]
     raise KeyError(name)
 
 
 def run_fetch_markets(
     data_dir: str | Path,
-    groups: Sequence[str] = ("yields", "futures"),
+    groups: Sequence[str] = ("yields", "futures", "dollar"),
     *,
     days: int | None = None,
     skip_if_fresh: int = 0,

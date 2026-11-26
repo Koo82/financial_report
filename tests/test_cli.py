@@ -187,5 +187,24 @@ class BackfillUsdjpyTests(unittest.TestCase):
         self.assertEqual(self.path.read_bytes(), before)
 
 
+class FetchMarketsCliTests(unittest.TestCase):
+    def test_dollar_group_is_accepted(self) -> None:
+        args = cli.build_parser().parse_args(
+            ["fetch-markets", "--group", "dollar"]
+        )
+        self.assertEqual(args.group, "dollar")
+
+    def test_all_groups_include_dollar(self) -> None:
+        with patch.object(
+            cli.markets, "run_fetch_markets", return_value=0
+        ) as run:
+            code = cli.main(["fetch-markets"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            run.call_args.args[1], ("yields", "futures", "dollar")
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

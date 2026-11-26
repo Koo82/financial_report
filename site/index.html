@@ -15,7 +15,7 @@
     />
     <meta
       name="description"
-      content="환율, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
+      content="환율, 달러 인덱스, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을 매일 확인하는 대시보드"
     />
     <title>오늘의 시장</title>
     <link rel="manifest" href="manifest.webmanifest" />
@@ -180,6 +180,67 @@
             <span id="axis-fx-start">—</span>
             <span class="axis-mid" id="axis-fx-mid" hidden>—</span>
             <span id="axis-fx-end">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="dollar-title">
+        <div class="section-head">
+          <div class="section-title">
+            <h2 id="dollar-title">달러 인덱스</h2>
+            <span class="stale-badge" id="dollar-stale" hidden>갱신 지연</span>
+          </div>
+          <p class="section-sub" id="dollar-asof">—</p>
+        </div>
+
+        <div class="cards">
+          <article class="card card--compact card--dxy">
+            <div class="card-head">
+              <h3>달러 인덱스</h3>
+              <span class="code">DXY · ICE</span>
+            </div>
+            <p class="rate">
+              <span id="dxy-rate" class="placeholder">—</span>
+            </p>
+            <p class="delta flat" id="dxy-delta">—</p>
+            <p class="card-meta" id="dxy-meta">—</p>
+          </article>
+        </div>
+
+        <div class="panel chart-panel" aria-label="달러 인덱스 추이">
+          <div class="panel-head">
+            <h3>최근 추이</h3>
+          </div>
+
+          <div class="chart-block">
+            <div class="chart-head">
+              <p class="chart-name">
+                <span class="dot dot--dxy"></span>
+                <span>달러 인덱스</span>
+                <span class="chart-unit">DXY</span>
+                <strong id="legend-dxy">—</strong>
+              </p>
+              <p class="chart-range" id="range-dxy">—</p>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="chart-dxy"
+                class="chart-svg"
+                role="img"
+                aria-label="달러 인덱스 추이 선 그래프"
+                viewBox="0 0 720 180"
+              ></svg>
+              <div class="chart-tooltip" id="tooltip-dxy" hidden></div>
+              <p class="chart-empty" id="empty-dxy" hidden>
+                표시할 데이터가 아직 충분하지 않아요.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-axis" aria-hidden="true">
+            <span id="axis-dollar-start">—</span>
+            <span class="axis-mid" id="axis-dollar-mid" hidden>—</span>
+            <span id="axis-dollar-end">—</span>
           </div>
         </div>
       </section>
@@ -622,7 +683,8 @@
         </p>
         <p>
           국채 금리는 미국 재무부 고시 par yield(2·5·10·30년), 선물은 최근월물
-          연속 계약의 종가입니다. 10년–2년 스프레드는 두 금리의 차이(%p)입니다.
+          연속 계약의 종가입니다. 달러 인덱스는 ICE US Dollar Index(DX-Y.NYB)의
+          일별 종가입니다. 10년–2년 스프레드는 두 금리의 차이(%p)입니다.
           기준금리는 한국은행·일본은행·미국 연준의 정책금리이며, 미국은
           목표범위로 표시합니다. 근원 PCE는 미국 경제분석국(BEA)이 발표하는 월별
           개인소비지출 물가지수에서 계산한 전년동월비·전월비입니다. 표시된 값은

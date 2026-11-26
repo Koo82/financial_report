@@ -1,4 +1,4 @@
-"""Fetch daily USD/KRW, JPY/KRW, and USD/JPY quotes from Yahoo Finance.
+"""Fetch daily FX quotes and the ICE US Dollar Index from Yahoo Finance.
 
 Yahoo's chart endpoint is unofficial and aggressively rate limits shared IPs,
 so every request tries both query hosts and retries with backoff. The caller
@@ -26,6 +26,7 @@ SYMBOLS = {
     "jpy": "JPYKRW=X",
     "usdjpy": "USDJPY=X",
 }
+DXY_SYMBOL = "DX-Y.NYB"
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -210,6 +211,26 @@ def fetch_usdjpy(
 
     return _fetch_series(
         SYMBOLS["usdjpy"],
+        days,
+        interval,
+        timeout=timeout,
+        attempts=attempts,
+        sleep=sleep,
+    )
+
+
+def fetch_dxy(
+    days: int = 1200,
+    interval: str = "1d",
+    *,
+    timeout: float = 15.0,
+    attempts: int = 3,
+    sleep: Callable[[float], None] | None = None,
+) -> dict[str, float]:
+    """Fetch ``{date: DXY close}`` for the last ``days`` from Yahoo."""
+
+    return _fetch_series(
+        DXY_SYMBOL,
         days,
         interval,
         timeout=timeout,

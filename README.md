@@ -1,9 +1,9 @@
 # 오늘의 시장
 
-환율, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을 매일 한 번
-갱신해서 보여주는 정적 대시보드입니다. GitHub Actions가 하루 두 번 데이터를 받아
-`data/` 아래 JSON에 쌓고, GitHub Pages로 배포합니다. iPad에서는 Safari로 열고
-**홈 화면에 추가**하면 앱처럼 사용할 수 있습니다.
+환율, 달러 인덱스, 기준금리, 미국 근원 PCE, 미국 국채 금리, 금과 원유 선물을
+매일 한 번 갱신해서 보여주는 정적 대시보드입니다. GitHub Actions가 하루 두 번
+데이터를 받아 `data/` 아래 JSON에 쌓고, GitHub Pages로 배포합니다. iPad에서는
+Safari로 열고 **홈 화면에 추가**하면 앱처럼 사용할 수 있습니다.
 
 - 서버나 데이터베이스가 필요 없고, 기준금리·근원 PCE만 무료 API 키를 사용합니다.
 - 일별 지표는 30일 / 90일 / 1년 / 3년 추이 차트를, 월별 근원 PCE는 1년 / 3년 /
@@ -18,6 +18,7 @@
 | 구분 | 항목 | 출처 |
 | --- | --- | --- |
 | 환율 | 달러/원(USD/KRW), 엔/원(100엔, JPY/KRW), 달러/엔(USD/JPY) | Yahoo Finance → ECB 기준환율 |
+| 달러 인덱스 | ICE US Dollar Index(DXY) | Yahoo Finance |
 | 기준금리 | 한국은행 기준금리, 일본은행 정책금리, 미국 연준 목표범위 | 한국은행 ECOS, BIS, FRED |
 | 미국 물가 | 근원 PCE 전년동월비, 전월비 | FRED · BEA |
 | 미국 국채 | 2년물, 5년물, 10년물, 30년물 par yield(%), 10년–2년 스프레드 | 미국 재무부 |
@@ -39,6 +40,7 @@
 ```
 .github/workflows/daily-rates.yml  # 월-토 09:00 KST 전후 갱신, 데이터 커밋, Pages 배포
 data/rates.json                    # 누적된 일별 환율
+data/dollar.json                   # 누적된 달러 인덱스(DXY)
 data/policy.json                   # 한국/일본/미국 기준금리 변경 이력
 data/pce.json                      # 월별 근원 PCE 지수와 전년동월비/전월비
 data/yields.json                   # 누적된 미국 국채 2/5/10/30년 금리
@@ -71,7 +73,7 @@ uv run financial-report fetch --data data/rates.json
 # 1-1) 기존 이력의 달러/엔을 Yahoo 3년치로 한 번 채우기
 uv run financial-report fetch-usdjpy --data data/rates.json --days 1200
 
-# 2) 국채 금리와 선물 받아오기
+# 2) 국채 금리, 선물, 달러 인덱스 받아오기
 uv run financial-report fetch-markets --data-dir data
 
 # 3) 기준금리 받아오기
@@ -82,7 +84,7 @@ uv run financial-report fetch-pce --data data/pce.json
 
 # 5) 미리보기
 mkdir -p site/data
-cp data/rates.json data/policy.json data/pce.json data/yields.json data/futures.json site/data/
+cp data/rates.json data/dollar.json data/policy.json data/pce.json data/yields.json data/futures.json site/data/
 python3 -m http.server 8000 -d site
 ```
 
@@ -104,6 +106,7 @@ uv run financial-report fetch --force            # 최신 데이터여도 강제
 uv run financial-report fetch-markets --group yields       # 국채만
 uv run financial-report fetch-markets --group yields --days 1200 --force  # 2년물 포함 3년치 백필
 uv run financial-report fetch-markets --group futures      # 선물만
+uv run financial-report fetch-markets --group dollar       # 달러 인덱스만
 uv run financial-report fetch-markets --days 1200 --force  # 3년치 백필
 uv run financial-report fetch-markets --dry-run            # 결과만 확인
 uv run financial-report fetch-markets --skip-if-fresh 180  # 3시간 내 갱신됐으면 건너뜀
@@ -173,6 +176,10 @@ KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크�
   않으면 ECB 기준환율(Frankfurter)을 사용하며, 달러/엔은 두 원화 환율에서
   교차 계산합니다. 화면 하단에 표시됩니다. 두 출처가 섞여 있을 수 있고, 최근
   값은 마지막으로 성공한 출처를 따르며 과거 구간은 당시 수집된 값이 유지됩니다.
+- **달러 인덱스**: Yahoo Finance의 ICE US Dollar Index(`DX-Y.NYB`) 일별 종가를
+  사용합니다. 유로·엔·파운드 등 주요 통화 바스켓 대비 달러 가치를 100 기준으로
+  나타냅니다. Frankfurter 같은 대체 출처는 사용하지 않으며, Yahoo가 응답하지
+  않으면 기존 `data/dollar.json`을 그대로 유지합니다.
 - **기준금리**: 한국은 ECOS의 기준금리 일별 계열, 미국은 FRED의 연준 목표범위
   상·하한, 일본은 BIS 중앙은행 정책금리(일본은행 발표 기준)를 사용합니다.
   금리가 바뀐 날짜만 이력으로 저장하며, 화면에는 최근 3년간의 변경 이력을
@@ -198,7 +205,8 @@ KST 재시도는 첫 실행이 이미 갱신한 경우 건너뜁니다. 워크�
 
 **Yahoo가 `429 Too Many Requests`를 반환하는 경우**
 Yahoo의 비공식 API는 공유 IP에 대해 요청을 제한합니다. 자동으로 재시도하고
-Frankfurter로 전환하므로 화면은 계속 동작합니다. GitHub Actions 러너에서는
+Frankfurter로 전환하므로 화면은 계속 동작합니다. 달러 인덱스는 Frankfurter
+대체가 없어 Yahoo가 실패하면 직전 값을 유지합니다. GitHub Actions 러너에서는
 대부분 정상적으로 수집됩니다.
 
 **Eastmoney가 `502`를 반환하는 경우**

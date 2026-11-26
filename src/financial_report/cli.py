@@ -210,8 +210,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="financial-report",
         description=(
-            "Fetch daily exchange rates, US Treasury yields, commodity "
-            "futures, central-bank policy rates, and Core PCE inflation."
+            "Fetch daily exchange rates, the dollar index, US Treasury "
+            "yields, commodity futures, central-bank policy rates, and "
+            "Core PCE inflation."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -280,16 +281,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     market = subparsers.add_parser(
         "fetch-markets",
-        help="fetch Treasury yields and commodity futures",
+        help="fetch Treasury yields, commodity futures, and the dollar index",
     )
     market.add_argument(
         "--data-dir",
         default="data",
-        help="directory holding yields.json and futures.json (default: data)",
+        help=(
+            "directory holding yields.json, futures.json, and dollar.json "
+            "(default: data)"
+        ),
     )
     market.add_argument(
         "--group",
-        choices=("all", "yields", "futures"),
+        choices=("all", "yields", "futures", "dollar"),
         default="all",
         help="series group to update (default: all)",
     )
@@ -409,7 +413,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "fetch-markets":
         groups = (
-            ("yields", "futures") if args.group == "all" else (args.group,)
+            ("yields", "futures", "dollar")
+            if args.group == "all"
+            else (args.group,)
         )
         return markets.run_fetch_markets(
             args.data_dir,
