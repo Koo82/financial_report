@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "futures",
-  "updatedAt": "2026-11-26T08:29:47+09:00",
+  "updatedAt": "2026-11-27T08:32:11+09:00",
   "source": "sina",
   "series": [
     "gold",
@@ -5102,6 +5102,12 @@
       "gold": 3617.4,
       "wti": 84.15,
       "brent": 90.7
+    },
+    {
+      "date": "2026-11-26",
+      "gold": 3593.1,
+      "wti": 84.9,
+      "brent": 91.7
     }
   ]
 }
